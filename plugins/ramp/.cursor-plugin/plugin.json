@@ -1,0 +1,15 @@
+{
+  "name": "ramp",
+  "displayName": "Ramp",
+  "version": "0.2.0",
+  "description": "Connect Cursor to Ramp via MCP and drive spend analysis, approvals, transaction cleanup, and vendor workflows.",
+  "author": {
+    "name": "Ramp",
+    "email": "developer-support@ramp.com"
+  },
+  "homepage": "https://github.com/ramp-public/skills",
+  "repository": "https://github.com/ramp-public/skills",
+  "license": "MIT",
+  "keywords": ["ramp", "mcp", "finance", "spend", "expenses", "approvals", "vendors"],
+  "logo": "assets/logo.svg"
+}

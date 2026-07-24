@@ -1,0 +1,53 @@
+---
+description: Safety and accuracy guardrails for working with Ramp (money handling, write confirmation, pagination, role scoping) via the Ramp CLI or MCP.
+alwaysApply: true
+---
+
+# Ramp safety guardrails
+
+These rules apply whenever you act on Ramp data — through the Ramp CLI (`ramp ...`) or the
+Ramp MCP server. They exist because Ramp tools move real money and act on a live financial
+account.
+
+## Write actions
+
+- Treat every approve, reject, payment, submit, card, or edit action as a write that
+  cannot be undone. There is no "undo" for approvals.
+- Always show the user the full item details (amount, vendor/payee, memo, date) before
+  approving or rejecting. Never blind-approve.
+- Confirm with the user before executing any write — especially bulk operations. State
+  exactly what will change, then wait for explicit confirmation.
+- Rejections require a reason. Approvals don't, but a short note is helpful.
+- Respect the authenticated user's role. Most company-wide tools require admin/business-owner
+  permissions; employees see only their own data. Surface permission errors plainly instead
+  of retrying with different arguments.
+
+## Money formatting
+
+Amounts are not represented consistently across resources — convert before displaying or
+summing:
+
+- Transactions: **formatted strings** (e.g. `"$1,048.25"`, `"-$259.49"`). Strip `$` and `,`
+  before sorting or totaling. A leading `-$` is a refund — include it but call it out.
+- Bills: **numeric dollars** (e.g. `15000`). Use directly, no parsing.
+- Reimbursements: **dollars**.
+- Purchase order amounts: **numeric**.
+
+There is no unified spend endpoint — card charges (transactions) and bill payments (bills)
+are separate. Query both for complete vendor spend. Always show a currency symbol and two
+decimals when presenting amounts.
+
+## Reading data
+
+- Paginate every list/queue until the cursor is exhausted (`next_page_cursor` /
+  `page_cursor`) — a single page rarely returns everything.
+- Merchant/vendor names are not normalized (e.g. "Delta Air Lines" vs "Delta Airlines").
+  Watch for variants, dedupe by stable IDs (e.g. `transaction_uuid`), and flag likely merges.
+- Sort queues by highest dollar amount first when presenting them for review.
+
+## General
+
+- With the CLI, pass `--agent` for machine-readable JSON when scripting or parsing.
+- Pass a meaningful reason/rationale on write actions describing why you're making them.
+- If Ramp access fails, tell the user to authenticate (`ramp auth login`) or connect/reconnect
+  the Ramp MCP server and restart, rather than guessing at data.

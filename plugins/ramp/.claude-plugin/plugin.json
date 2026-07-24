@@ -1,0 +1,18 @@
+{
+  "name": "ramp",
+  "version": "0.2.0",
+  "description": "Connect Claude to Ramp for spend analysis, approvals, transaction cleanup, and vendor workflows.",
+  "displayName": "Ramp",
+  "author": {
+    "name": "Ramp",
+    "email": "developer-support@ramp.com",
+    "url": "https://ramp.com"
+  },
+  "homepage": "https://github.com/ramp-public/skills",
+  "repository": "https://github.com/ramp-public/skills",
+  "license": "MIT",
+  "keywords": ["ramp", "mcp", "finance", "spend", "expenses", "approvals", "vendors"],
+  "skills": ["./skills/"],
+  "commands": ["./commands/"],
+  "mcpServers": "./mcp.json"
+}

@@ -1,0 +1,34 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# Local secrets / credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.mobileprovision
+*.provisionprofile
+*credential*
+*credentials*
+*secret*
+*secrets*
+*token*
+
+# Local auth / tool state
+.ramp/
+.cursor/
+.claude/
+.pw-agent/
+
+# Publishing pipeline scratch directory
+/upstream/
+
+# Node tooling
+node_modules/

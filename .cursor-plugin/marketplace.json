@@ -1,0 +1,17 @@
+{
+  "name": "ramp-official",
+  "owner": {
+    "name": "Ramp"
+  },
+  "metadata": {
+    "description": "Official Ramp plugins for AI agents.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "ramp",
+      "source": "./plugins/ramp",
+      "description": "Connect Cursor to Ramp for spend analysis, approvals, transaction cleanup, and vendor workflows."
+    }
+  ]
+}
