@@ -1,0 +1,85 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Agentic Commerce",
+      "description": "Make agent-driven purchases and programmable payments.",
+      "skills": [
+        "ramp-agentic-purchase",
+        "ramp-x402-pay"
+      ]
+    },
+    {
+      "title": "Approvals",
+      "description": "Review and act on pending financial approvals.",
+      "skills": [
+        "ramp-approval-dashboard"
+      ]
+    },
+    {
+      "title": "Automation",
+      "description": "Automate browser-based workflows.",
+      "skills": [
+        "ramp-browser-automation"
+      ]
+    },
+    {
+      "title": "Bill Pay",
+      "description": "Inspect bills and track vendor bill payments.",
+      "skills": [
+        "ramp-manage-bills",
+        "ramp-payment-lookup"
+      ]
+    },
+    {
+      "title": "Cards and Spend",
+      "description": "Manage cards, transactions, receipts, and spend analysis.",
+      "skills": [
+        "ramp-card-management",
+        "ramp-receipt-compliance",
+        "ramp-spend-analysis",
+        "ramp-transaction-cleanup"
+      ]
+    },
+    {
+      "title": "Getting Started",
+      "description": "Set up Ramp, apply for an account, and complete business formation.",
+      "skills": [
+        "ramp-apply-for-account",
+        "ramp-get-started",
+        "ramp-incorporate"
+      ]
+    },
+    {
+      "title": "Procurement",
+      "description": "Create, inspect, and manage procurement requests and purchase orders.",
+      "skills": [
+        "ramp-manage-procurement",
+        "ramp-submit-procurement-request"
+      ]
+    },
+    {
+      "title": "Reimbursements",
+      "description": "Create and submit employee reimbursements.",
+      "skills": [
+        "ramp-submit-reimbursement"
+      ]
+    },
+    {
+      "title": "Travel",
+      "description": "Search and book business travel.",
+      "skills": [
+        "ramp-book-flight",
+        "ramp-book-hotel"
+      ]
+    },
+    {
+      "title": "Vendor Management",
+      "description": "Manage vendor documents and onboarding materials.",
+      "skills": [
+        "ramp-vendor-document-upload"
+      ]
+    }
+  ]
+}
