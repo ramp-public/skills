@@ -27,6 +27,7 @@ Confirm the CLI is on the shell's `PATH` before asking the agent to use it.
 - Complete the OAuth flow opened by the client.
 - Restart the client after changing its MCP configuration.
 - Use `https://demo-mcp.ramp.com/mcp` only when sample data is intended.
+- If using a custom MCP client or gateway, confirm your redirect URI has been [whitelisted](https://docs.ramp.com/developer-api/v1/mcp-redirect-whitelist-request). OAuth will fail until the URI is approved.
 
 ## A tool returns a permission error
 
