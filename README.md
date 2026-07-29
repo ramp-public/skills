@@ -49,7 +49,14 @@ Keep skills up to date with `npx skills update` (and preview with `npx skills ch
 ### Connect your agent to Ramp
 
 - **Terminal-based agents:** install the Ramp CLI using the [public installation guide](https://agents.ramp.com), then run `ramp auth login`.
-- **MCP-capable agents:** connect to `https://mcp.ramp.com/mcp` or install Ramp from your client's connector directory where available.
+- **MCP-capable agents:** connect to `https://mcp.ramp.com/mcp` or install Ramp from your client's connector directory:
+  - [Claude](https://claude.ai/directory/61bac03c-3f98-4b3c-affb-1b99533fa82c)
+  - [ChatGPT](https://chatgpt.com/apps/ramp/asdk_app_69250fb6281c819195b52a1556b0060c)
+  - [Perplexity](https://www.perplexity.ai/computer/connectors?connector=ramp)
+  - [Cursor](https://agents.ramp.com/docs/connectors/cursor)
+  - See the full [connectors overview](https://agents.ramp.com/docs/connectors/overview) for all supported clients.
+- **Custom MCP client or gateway:** point at `https://mcp.ramp.com/mcp` — you must [whitelist your redirect URI](https://docs.ramp.com/developer-api/v1/mcp-redirect-whitelist-request) before OAuth will work.
+- **Sandbox / demo:** use `https://demo-mcp.ramp.com/mcp` for sample data without a production account. For CLI sandbox access, see the [sandbox docs](https://docs.ramp.com/developer-api/v1/sandbox-access).
 
 Ramp Skills contain instructions; access to Ramp data requires a separately authenticated Ramp
 tool connection.

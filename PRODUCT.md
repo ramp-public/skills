@@ -57,4 +57,6 @@ Tool contracts (parameters, semantics) are identical on both; each operation is 
 - Product docs: https://docs.ramp.com
 - Agent playbooks & install: https://agents.ramp.com (skills at `/.well-known/agent-skills/`)
 - Developer API: https://docs.ramp.com/developer-api/v1/overview
-- Connectors: [Claude](https://claude.ai/directory/61bac03c-3f98-4b3c-affb-1b99533fa82c) · [ChatGPT](https://chatgpt.com/apps/ramp/asdk_app_69250fb6281c819195b52a1556b0060c) · [Perplexity](https://www.perplexity.ai/computer/connectors?connector=ramp)
+- Connectors overview: https://agents.ramp.com/docs/connectors/overview — [Claude](https://claude.ai/directory/61bac03c-3f98-4b3c-affb-1b99533fa82c) · [ChatGPT](https://chatgpt.com/apps/ramp/asdk_app_69250fb6281c819195b52a1556b0060c) · [Perplexity](https://www.perplexity.ai/computer/connectors?connector=ramp) · [Cursor](https://agents.ramp.com/docs/connectors/cursor)
+- Custom MCP redirect URI whitelist: https://docs.ramp.com/developer-api/v1/mcp-redirect-whitelist-request
+- Sandbox access: https://docs.ramp.com/developer-api/v1/sandbox-access · Demo MCP: `https://demo-mcp.ramp.com/mcp`
