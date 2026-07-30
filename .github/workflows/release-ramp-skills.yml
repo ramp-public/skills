@@ -1,0 +1,79 @@
+name: Release Ramp Skills
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build deterministic skills archive
+        run: |
+          set -euo pipefail
+
+          mapfile -t skill_files < <(
+            find skills -mindepth 2 -maxdepth 2 -type f \
+              -path 'skills/ramp-*/SKILL.md' -print | LC_ALL=C sort
+          )
+          if (( ${#skill_files[@]} == 0 )); then
+            echo "::error::No skills/ramp-*/SKILL.md files found"
+            exit 1
+          fi
+
+          mkdir -p build
+          source_date_epoch="$(git log -1 --format=%ct)"
+          tar \
+            --sort=name \
+            --format=ustar \
+            --owner=0 \
+            --group=0 \
+            --numeric-owner \
+            --mtime="@$source_date_epoch" \
+            -cf - \
+            "${skill_files[@]}" |
+            gzip -n -9 > build/ramp-skills.tar.gz
+
+      - name: Generate checksum
+        run: |
+          cd build
+          sha256sum ramp-skills.tar.gz > ramp-skills.tar.gz.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ramp-skills
+          path: |
+            build/ramp-skills.tar.gz
+            build/ramp-skills.tar.gz.sha256
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ramp-skills
+
+      - name: Verify expected artifacts
+        run: |
+          test -f ramp-skills.tar.gz || { echo "Missing ramp-skills.tar.gz"; exit 1; }
+          test -f ramp-skills.tar.gz.sha256 || { echo "Missing ramp-skills.tar.gz.sha256"; exit 1; }
+          sha256sum --check ramp-skills.tar.gz.sha256
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --generate-notes \
+            ramp-skills.tar.gz \
+            ramp-skills.tar.gz.sha256
