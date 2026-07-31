@@ -16,6 +16,15 @@ runtimes: [Claude Desktop, ChatGPT, Claude Code, Codex, Perplexity]
 
 Hand your agent this playbook and it'll figure out whether you're a new or existing Ramp customer, walk you through the right onboarding path, and then hand you the menu of every other playbook you can run. This is the one-fetch entry point — the rest of the playbook directory becomes discoverable once setup is done.
 
+## Keep Ramp skills current
+
+If you installed Ramp skills through the Ramp CLI, refresh the catalog and installed copies with:
+
+```bash
+ramp skills update
+ramp skills install --all
+```
+
 ## How to run
 
 Identify which runtime you're operating in (Claude Desktop, ChatGPT, Claude Code, Codex, Perplexity). Use the matching section below; ignore the others.
