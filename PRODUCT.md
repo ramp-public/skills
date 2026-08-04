@@ -19,36 +19,36 @@ Tool contracts (parameters, semantics) are identical on both; each operation is 
 
 | Area | What it covers | Key entities | Load |
 |---|---|---|---|
-| Cards & Spend | Corporate cards, transactions, funds (spend allocations), receipts, memos, coding | transaction, fund, receipt, tracking category, merchant | `ramp-transaction-cleanup`, `ramp-spend-analysis`, `ramp-card-management`, `ramp-approval-dashboard`, `ramp-receipt-compliance` |
+| Cards & Spend | Corporate cards, transactions, funds (spend allocations), receipts, memos, coding | transaction, fund, receipt, tracking category, merchant | `ramp-complete-expenses`, `ramp-spend-analysis`, `ramp-card-management`, `ramp-approval-dashboard` |
 | Bill Pay | Vendor bills/invoices, payment status, approvals, recurring bills | bill, draft bill, recurring bill, payment, vendor (payee) | `ramp-manage-bills`, `ramp-payment-lookup`, `ramp-approval-dashboard` |
 | Procurement | Purchase requests, purchase orders, request approvals | unified request, purchase order | `ramp-submit-procurement-request`, `ramp-manage-procurement` |
 | Travel | Flight and hotel search/booking under company policy | trip, booking, policy | `ramp-book-flight`, `ramp-book-hotel` |
 | Banking & Treasury | Ramp checking accounts, investment/managed-portfolio balances, transfers | treasury account (checking / investment / managed portfolio), wallet transfer | *(flagship skill coming — see area folder)* |
-| Accounting | Coding hygiene, missing items, ERP sync readiness | tracking category, sync run, missing items | `ramp-transaction-cleanup` *(close-books coming)* |
-| Vendor Management | Vendors (payees), agreements/contracts, vendor documents | vendor, agreement/contract, vendor document | `ramp-vendor-document-upload` *(ramp-vendors coming)* |
+| Accounting | Coding hygiene, missing items, ERP sync readiness | tracking category, sync run, missing items | `ramp-complete-expenses` *(close-books coming)* |
+| Vendor Management | Vendors (payees), agreements/contracts, vendor documents | vendor, agreement/contract, vendor document | `ramp-manage-vendors` |
 | Reimbursements | Out-of-pocket expense reimbursement | reimbursement, receipt | `ramp-submit-reimbursement` |
-| Agentic commerce | Agent cards, browser checkout, x402 payments | agent card fund, payment token | `ramp-agentic-purchase`, `ramp-x402-pay` |
+| Agentic commerce | Agent cards, browser checkout | agent card fund, payment token | `ramp-agentic-purchase` |
 
 ### Entity disambiguation
 
 - **Vendor (payee)** — who the business pays via Bill Pay. **Merchant** — who appears on card transactions. The same company can be both; correlate by name.
 - **Fund / spend allocation** — card-side budget container (also called cards or budgets). Distinct from **treasury accounts** (actual bank/investment accounts).
 - **Bill vs. transaction** — bills are AP documents owed to vendors; transactions are card spend events.
-- Amounts vary by endpoint family: bills are in cents, reimbursements in dollars, transactions as formatted strings — each skill documents its endpoints' conventions.
+- Amounts vary by endpoint family: bill amounts are numeric major currency units (never divide by 100), reimbursements are in dollars, and transactions are formatted strings — each skill documents its endpoints' conventions.
 
 ## Task routing
 
 | User wants to... | Load |
 |---|---|
-| Fix missing memos/categories on card spend | `ramp-transaction-cleanup` |
+| Fix missing memos/categories/receipts on card spend | `ramp-complete-expenses` |
 | See or act on their approval queue | `ramp-approval-dashboard` |
 | Find/track a bill or a bill payment | `ramp-manage-bills`, `ramp-payment-lookup` |
 | Analyze spend by vendor/category/team | `ramp-spend-analysis` |
 | Book or quote travel | `ramp-book-flight`, `ramp-book-hotel` |
 | Submit or track a purchase request | `ramp-submit-procurement-request`, `ramp-manage-procurement` |
 | Submit an out-of-pocket expense | `ramp-submit-reimbursement` |
-| Upload receipts or vendor documents | `ramp-receipt-compliance`, `ramp-vendor-document-upload` |
-| Make a purchase with an agent card | `ramp-agentic-purchase` (see also `ramp-browser-automation`) |
+| Upload vendor documents (W-9s, contracts, COIs) | `ramp-manage-vendors` |
+| Make a purchase with an agent card | `ramp-agentic-purchase` |
 | Apply to Ramp / incorporate a company | `ramp-apply-for-account`, `ramp-incorporate` |
 | Set up their agent for Ramp from scratch | `ramp-get-started` |
 

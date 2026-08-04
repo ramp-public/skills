@@ -1,14 +1,15 @@
 ---
-name: ramp-vendor-document-upload
+name: ramp-manage-vendors
 area: Vendor Management
 supported_surfaces: [cli, mcp]
 description: |-
-  Upload vendor documents such as W-9/W-8 tax forms, contracts, COIs,
-  payment instructions, and onboarding paperwork, then check bulk upload
-  OCR and matching status. Use when: 'upload a W9', 'attach a vendor
-  contract', 'bulk upload supplier docs', 'check vendor document status',
-  'upload a COI for a vendor'. Do NOT use for card transaction receipts
-  (use ramp-receipt-compliance) or bill invoice attachments (use bills commands).
+  Manage your vendors' documents and onboarding materials — upload vendor
+  documents such as W-9/W-8 tax forms, contracts, COIs, payment instructions,
+  and onboarding paperwork, then check bulk upload OCR and matching status.
+  Use when: 'upload a W9', 'attach a vendor contract', 'bulk upload supplier
+  docs', 'check vendor document status', 'upload a COI for a vendor'. Do NOT
+  use for card transaction receipts (use ramp-complete-expenses) or bill
+  invoice attachments (use ramp-manage-bills).
 ---
 
 ## Non-Negotiables
@@ -24,6 +25,8 @@ description: |-
 ## Workflow
 
 ### Mode 1: Attach one document to a known vendor
+
+**Surface: CLI only.** This upload operation is not available through MCP.
 
 Use this when the user gives both a file path and the target vendor UUID.
 
@@ -59,6 +62,8 @@ The upload response includes:
 
 ### Mode 2: Upload one document into vendor matching/triage
 
+**Surface: CLI only.** This upload operation is not available through MCP.
+
 Use this when the user has a file but not a trustworthy vendor UUID yet.
 
 ```bash
@@ -72,6 +77,8 @@ ramp vendors attach-document \
 If `vendor_uuid` is omitted in the response, tell the user the document was uploaded into the matching flow and may need review in Ramp.
 
 ### Mode 3: Bulk upload many vendor documents
+
+**Surface: CLI only.** This upload operation is not available through MCP.
 
 `documents` is a complex array, so use `--json` for the request body.
 
@@ -102,20 +109,22 @@ If the user does not have a single confirmed vendor UUID for all files, omit `ve
 
 ### Mode 4: Check bulk upload status
 
+**Surface: CLI or MCP.** Use the CLI command below or the MCP bulk upload status tool.
+
 Poll the batch until OCR/matching has finished or attention is needed:
 
 ```bash
-ramp --agent vendors bulk-upload-status "batch_123" --rationale "Check OCR/matching progress for the user's document batch"
+ramp --agent vendors bulk-upload-status "{batch_id}" --rationale "Check OCR/matching progress for the user's document batch"
 ```
 
 Useful filters:
 
 ```bash
 # Only W-form documents
-ramp --agent vendors bulk-upload-status "batch_123" --is_w_document --rationale "Check OCR status of W-form documents in the batch"
+ramp --agent vendors bulk-upload-status "{batch_id}" --is_w_document --rationale "Check OCR status of W-form documents in the batch"
 
 # Exclude W-form documents
-ramp --agent vendors bulk-upload-status "batch_123" --no-is_w_document --rationale "Check OCR status of non-W-form documents in the batch"
+ramp --agent vendors bulk-upload-status "{batch_id}" --no-is_w_document --rationale "Check OCR status of non-W-form documents in the batch"
 ```
 
 Summarize these response fields for the user:
@@ -171,11 +180,15 @@ Document UUID: doc_456
 
 For a bulk batch, lead with job progress and whether manual review is still required:
 
+`upload_job.status: COMPLETE` means the upload job is terminal, not necessarily that document processing is finished. Only say all documents are processed when `documents_with_running_ocr_count` and `documents_needing_attention_count` are both zero and `review_required` is false.
+
 ```
-Batch batch_123
-Status: SUCCEEDED - all documents processed
+Batch {batch_id}
+Upload job status: COMPLETE
+Running OCR: 0
 Matched: 8 / 10
 Needs review: 2
+Review required: yes
 
 Needs attention
   acme-w9.pdf     W9               Acme Corp (score 0.92)
@@ -184,8 +197,8 @@ Needs attention
 
 ## When NOT to Use
 
-- Uploading receipts to transactions or reimbursements - use ramp-receipt-compliance.
-- Editing transaction memo/category/fund metadata - use ramp-transaction-cleanup.
+- Uploading receipts to card transactions, or editing transaction memo/category/fund metadata - use ramp-complete-expenses.
+- Submitting a receipt-backed out-of-pocket reimbursement - use ramp-submit-reimbursement.
 - Approving bills, transactions, requests, or reimbursements - use ramp-approval-dashboard.
 - Retrieving invoice attachments from a submitted bill - use `ramp bills attachments`.
 

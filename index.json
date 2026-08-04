@@ -3,7 +3,7 @@
   "skills": [
     {
       "name": "ramp-agentic-purchase",
-      "description": "Make purchases using Ramp agent cards via browser checkout, then complete all transaction requirements (memo, tracking categories, receipt, trip). Use when asked to buy something with an agent card, make a payment using Ramp, spend from a fund, complete missing transaction items, or test the agent card payment flow. Also use when asked about agent card access, availability, or how to get started with Agentic Cards. Requires ramp CLI and ramp-browser-automation skill.",
+      "description": "Make purchases using Ramp agent cards via browser checkout, then complete all transaction requirements (memo, tracking categories, receipt, trip). Use when asked to buy something with an agent card, make a payment using Ramp, spend from a fund, complete missing transaction items, or test the agent card payment flow. Also use when asked about agent card access, availability, or how to get started with Agentic Cards. Requires ramp CLI and a playwright-cli-driven browser (see bundled browser-checkout.md).",
       "area": "Agentic Commerce",
       "supported_surfaces": [
         "browser",
@@ -52,15 +52,6 @@
       "path": "skills/ramp-book-hotel"
     },
     {
-      "name": "ramp-browser-automation",
-      "description": "Automate Google Chrome for web tasks — navigate sites, fill forms, click elements, take snapshots, and extract content. Powered by playwright-cli (pw) with an opt-in persistent browser profile. Use when asked to interact with a website, fill out a checkout form, scrape content, or perform any browser-based workflow.",
-      "area": "Automation",
-      "supported_surfaces": [
-        "browser"
-      ],
-      "path": "skills/ramp-browser-automation"
-    },
-    {
       "name": "ramp-card-management",
       "description": "Inspect a user's card/fund status, then activate or lock/unlock a card from\nthe terminal. Use for card status, card lock questions, physical card\nactivation, and card lock/unlock actions.",
       "area": "Cards and Spend",
@@ -69,6 +60,16 @@
         "mcp"
       ],
       "path": "skills/ramp-card-management"
+    },
+    {
+      "name": "ramp-complete-expenses",
+      "description": "Find and complete missing items on your transactions — receipts, memos,\naccounting categories, funds, and attendees. Use when: 'missing receipts',\n'upload receipt', 'attach receipt', 'receipt sweep', 'add memo',\n'categorize transactions', 'missing items', 'transaction cleanup',\n'fix my transactions', 'set tracking category', 'assign to fund',\n'bulk memo update', 'receipt compliance'. Do NOT use for: approving\ntransactions (use ramp-approval-dashboard), vendor documents like W-9s or\ncontracts (use ramp-manage-vendors), or spend reporting (use ramp-spend-analysis).",
+      "area": "Cards and Spend",
+      "supported_surfaces": [
+        "cli",
+        "mcp"
+      ],
+      "path": "skills/ramp-complete-expenses"
     },
     {
       "name": "ramp-get-started",
@@ -91,7 +92,7 @@
     },
     {
       "name": "ramp-manage-bills",
-      "description": "Search, inspect, and manage vendor bills and invoices. Use when:\n'find a bill', 'show me pending bills', 'bill details', 'look up a bill',\n'draft bill details', 'bill attachments', 'what bills need my approval'.\nDo NOT use for: approving bills (use ramp-approval-dashboard), uploading vendor\ndocuments (use ramp-vendor-document-upload), or card transaction management\n(use ramp-transaction-cleanup).",
+      "description": "Search, inspect, and manage vendor bills and invoices. Use when:\n'find a bill', 'show me pending bills', 'bill details', 'look up a bill',\n'draft bill details', 'bill attachments', 'what bills need my approval'.\nDo NOT use for: approving bills (use ramp-approval-dashboard), uploading vendor\ndocuments (use ramp-manage-vendors), or card transaction management\n(use ramp-complete-expenses).",
       "area": "Bill Pay",
       "supported_surfaces": [
         "cli",
@@ -110,8 +111,18 @@
       "path": "skills/ramp-manage-procurement"
     },
     {
+      "name": "ramp-manage-vendors",
+      "description": "Manage your vendors' documents and onboarding materials — upload vendor\ndocuments such as W-9/W-8 tax forms, contracts, COIs, payment instructions,\nand onboarding paperwork, then check bulk upload OCR and matching status.\nUse when: 'upload a W9', 'attach a vendor contract', 'bulk upload supplier\ndocs', 'check vendor document status', 'upload a COI for a vendor'. Do NOT\nuse for card transaction receipts (use ramp-complete-expenses) or bill\ninvoice attachments (use ramp-manage-bills).",
+      "area": "Vendor Management",
+      "supported_surfaces": [
+        "cli",
+        "mcp"
+      ],
+      "path": "skills/ramp-manage-vendors"
+    },
+    {
       "name": "ramp-payment-lookup",
-      "description": "Look up vendor bill payments and verify payment status from the terminal.\nUse when: 'did we pay', 'payment status', 'check if paid', 'verify payment',\n'find invoice', 'bill lookup', 'was this bill paid', 'payment confirmation'.\nDo NOT use for: approving bills (use ramp-approval-dashboard), spend analysis\nacross vendors (use ramp-spend-analysis), or uploading receipts (use ramp-receipt-compliance).",
+      "description": "Look up vendor bill payments and verify payment status from the terminal.\nUse when: 'did we pay', 'payment status', 'check if paid', 'verify payment',\n'find invoice', 'bill lookup', 'was this bill paid', 'payment confirmation'.\nDo NOT use for: approving bills (use ramp-approval-dashboard), spend analysis\nacross vendors (use ramp-spend-analysis), or uploading receipts (use ramp-complete-expenses).",
       "area": "Bill Pay",
       "supported_surfaces": [
         "cli",
@@ -120,18 +131,8 @@
       "path": "skills/ramp-payment-lookup"
     },
     {
-      "name": "ramp-receipt-compliance",
-      "description": "Find your transactions missing receipts and upload them. Use when: 'missing receipts',\n'receipt compliance', 'upload receipt', 'attach receipt', 'receipt sweep',\n'transactions without receipts'. Do NOT use for memo/coding/fund cleanup\n(use ramp-transaction-cleanup) or approving transactions (use ramp-approval-dashboard).",
-      "area": "Cards and Spend",
-      "supported_surfaces": [
-        "cli",
-        "mcp"
-      ],
-      "path": "skills/ramp-receipt-compliance"
-    },
-    {
       "name": "ramp-spend-analysis",
-      "description": "Analyze spend by vendor, category, or team over a date range. Pulls card transactions\nand bill payments, aggregates totals, and produces summary tables.\nUse when: 'how much did we spend on', 'vendor spend', 'SaaS review', 'spend report',\n'inference costs', 'total spend', 'spend by vendor', 'spend analysis',\n'pull transactions for', 'cost breakdown'.\nDo NOT use for: approving transactions (use ramp-approval-dashboard), uploading receipts\n(use ramp-receipt-compliance), or verifying a single bill payment (use ramp-payment-lookup).",
+      "description": "Analyze spend by vendor, category, or team over a date range. Pulls card transactions\nand bill payments, aggregates totals, and produces summary tables.\nUse when: 'how much did we spend on', 'vendor spend', 'SaaS review', 'spend report',\n'inference costs', 'total spend', 'spend by vendor', 'spend analysis',\n'pull transactions for', 'cost breakdown'.\nDo NOT use for: approving transactions (use ramp-approval-dashboard), uploading receipts\n(use ramp-complete-expenses), or verifying a single bill payment (use ramp-payment-lookup).",
       "area": "Cards and Spend",
       "supported_surfaces": [
         "cli",
@@ -151,43 +152,13 @@
     },
     {
       "name": "ramp-submit-reimbursement",
-      "description": "Submit an out-of-pocket reimbursement from a receipt. Use when: 'submit reimbursement',\n'reimburse me', 'I paid out of pocket', 'expense a receipt', 'file reimbursement',\n'OOP expense', 'I bought something for work'. Do NOT use for: approving reimbursements\n(use ramp-approval-dashboard), uploading receipts to card transactions (use ramp-receipt-compliance),\nor editing existing reimbursements.",
+      "description": "Submit an out-of-pocket reimbursement from a receipt. Use when: 'submit reimbursement',\n'reimburse me', 'I paid out of pocket', 'expense a receipt', 'file reimbursement',\n'OOP expense', 'I bought something for work'. Do NOT use for: approving reimbursements\n(use ramp-approval-dashboard), uploading receipts to card transactions (use ramp-complete-expenses),\nor editing existing reimbursements.",
       "area": "Reimbursements",
       "supported_surfaces": [
         "cli",
         "mcp"
       ],
       "path": "skills/ramp-submit-reimbursement"
-    },
-    {
-      "name": "ramp-transaction-cleanup",
-      "description": "Complete missing items on your transactions — memos, accounting categories, funds,\nand attendees. Use when: 'add memo', 'categorize transactions', 'missing items',\n'transaction cleanup', 'fix my transactions', 'set tracking category',\n'assign to fund', 'bulk memo update'. Do NOT use for: receipt uploads\n(use ramp-receipt-compliance) or approvals (use ramp-approval-dashboard).",
-      "area": "Cards and Spend",
-      "supported_surfaces": [
-        "cli",
-        "mcp"
-      ],
-      "path": "skills/ramp-transaction-cleanup"
-    },
-    {
-      "name": "ramp-vendor-document-upload",
-      "description": "Upload vendor documents such as W-9/W-8 tax forms, contracts, COIs,\npayment instructions, and onboarding paperwork, then check bulk upload\nOCR and matching status. Use when: 'upload a W9', 'attach a vendor\ncontract', 'bulk upload supplier docs', 'check vendor document status',\n'upload a COI for a vendor'. Do NOT use for card transaction receipts\n(use ramp-receipt-compliance) or bill invoice attachments (use bills commands).",
-      "area": "Vendor Management",
-      "supported_surfaces": [
-        "cli",
-        "mcp"
-      ],
-      "path": "skills/ramp-vendor-document-upload"
-    },
-    {
-      "name": "ramp-x402-pay",
-      "description": "Pay an x402 (HTTP 402) payment challenge from a merchant using the business's Ramp agentic Solana USDC wallet, then attach the payment and get the resource. Use when asked to pay for an x402 API/resource, 'pay with x402', buy an Exa search, create an AgentMail inbox, pay a paid API that returns 402, or complete/test an x402 payment. Requires the ramp CLI authenticated with the x402:write scope and a provisioned agentic Solana wallet.",
-      "area": "Agentic Commerce",
-      "supported_surfaces": [
-        "cli",
-        "mcp"
-      ],
-      "path": "skills/ramp-x402-pay"
     }
   ]
 }

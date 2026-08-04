@@ -1,13 +1,8 @@
----
-name: ramp-browser-automation
-area: Automation
-supported_surfaces: [browser]
-description: "Automate Google Chrome for web tasks — navigate sites, fill forms, click elements, take snapshots, and extract content. Powered by playwright-cli (pw) with an opt-in persistent browser profile. Use when asked to interact with a website, fill out a checkout form, scrape content, or perform any browser-based workflow."
----
+# Browser Checkout Reference
 
-# Browser Automation
+Supporting reference for the `ramp-agentic-purchase` skill: how to drive Google Chrome for merchant checkout via `playwright-cli` (pw). This content previously shipped as the standalone ramp-browser-automation skill and is now bundled here — it is not a standalone skill; use it only as part of an agent card purchase flow.
 
-Automate Google Chrome via `playwright-cli` (pw). Supports a persistent Chrome profile at `~/.pw-agent/.playwright-profile/` so logins and cookies can survive across sessions. **Persisting authenticated state is opt-in**: tell the user that logins performed in this browser are saved for future sessions and get their explicit consent before relying on that; for tasks that don't need saved logins, use an isolated numbered/named session (see [Multi-session support](#multi-session-support)) instead of the shared profile.
+Chrome is automated via `playwright-cli` (pw). A persistent Chrome profile at `~/.pw-agent/.playwright-profile/` lets logins and cookies survive across sessions. **Persisting authenticated state is opt-in**: tell the user that logins performed in this browser are saved for future sessions and get their explicit consent before relying on that; for tasks that don't need saved logins, use an isolated numbered/named session (see [Multi-session support](#multi-session-support)) instead of the shared profile.
 
 ## Prerequisites
 

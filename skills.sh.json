@@ -6,8 +6,7 @@
       "title": "Agentic Commerce",
       "description": "Make agent-driven purchases and programmable payments.",
       "skills": [
-        "ramp-agentic-purchase",
-        "ramp-x402-pay"
+        "ramp-agentic-purchase"
       ]
     },
     {
@@ -15,13 +14,6 @@
       "description": "Review and act on pending financial approvals.",
       "skills": [
         "ramp-approval-dashboard"
-      ]
-    },
-    {
-      "title": "Automation",
-      "description": "Automate browser-based workflows.",
-      "skills": [
-        "ramp-browser-automation"
       ]
     },
     {
@@ -37,9 +29,8 @@
       "description": "Manage cards, transactions, receipts, and spend analysis.",
       "skills": [
         "ramp-card-management",
-        "ramp-receipt-compliance",
-        "ramp-spend-analysis",
-        "ramp-transaction-cleanup"
+        "ramp-complete-expenses",
+        "ramp-spend-analysis"
       ]
     },
     {
@@ -78,7 +69,7 @@
       "title": "Vendor Management",
       "description": "Manage vendor documents and onboarding materials.",
       "skills": [
-        "ramp-vendor-document-upload"
+        "ramp-manage-vendors"
       ]
     }
   ]

@@ -6,17 +6,17 @@ description: |-
   Submit an out-of-pocket reimbursement from a receipt. Use when: 'submit reimbursement',
   'reimburse me', 'I paid out of pocket', 'expense a receipt', 'file reimbursement',
   'OOP expense', 'I bought something for work'. Do NOT use for: approving reimbursements
-  (use ramp-approval-dashboard), uploading receipts to card transactions (use ramp-receipt-compliance),
+  (use ramp-approval-dashboard), uploading receipts to card transactions (use ramp-complete-expenses),
   or editing existing reimbursements.
 ---
 
 ## Non-Negotiables
 
 - **Pass `--rationale` on every command** — it is a required field on these agent-tools (a non-empty string, max 1024 chars). With `--json`, supply it as a `"rationale"` key in the body. Omitting it returns `HTTP 422 (DEVELOPER_INVALID_SCHEMA)`, in both agent and human modes.
-- Never submit without confirming the details with the user first. Show amount, merchant, memo, fund, and accounting categories before submitting.
+- Never submit without confirming the details with the user first. Show amount and currency, merchant, memo, fund, and accounting categories before submitting.
 - Receipts must be **base64-encoded** for upload. Accepted types: PNG, JPEG, PDF, HEIC, WEBP.
 - All CLI flags use **underscores**, not hyphens (e.g., `--fund_uuid`, `--page_size`).
-- Reimbursement amounts are in **dollars** (not cents).
+- Reimbursement amounts use major units in the draft's existing currency (for example, `42.50` means EUR 42.50 for a EUR draft, not cents). An amount-only edit preserves the existing currency.
 - After editing, always check `missing_items` in the response. Do not submit until all required items are resolved.
 
 ## Workflow
@@ -72,6 +72,16 @@ ramp reimbursements edit {reimbursement_uuid} \
   --fund_uuid "{suggested_fund_uuid}" --rationale "Update the reimbursement for the user"
 ```
 
+If the receipt amount is wrong, correct it while the reimbursement is still in `DRAFT`. Use the draft's existing currency shown in the tool response:
+
+```bash
+# For a draft whose existing currency is EUR
+ramp reimbursements edit {reimbursement_uuid} \
+  --amount 42.50 --rationale "Correct the reimbursement amount for the user"
+```
+
+Amounts must be positive values in the existing draft currency; `--amount` alone does not change the currency. After editing, check `missing_items` as usual and show both the corrected amount and currency in the final confirmation before submitting.
+
 For tracking categories, use `--json`:
 
 ```bash
@@ -101,7 +111,7 @@ Present the complete reimbursement before submitting:
 
 ```
 Ready to submit:
-  Amount:    $42.50
+  Amount:    USD 42.50
   Merchant:  Blue Bottle Coffee
   Memo:      Coffee with client — discussed Q2 roadmap
   Fund:      Social bonding & Team outings 2026
@@ -192,7 +202,7 @@ Let me fill in the details using the suggestions:
 >   --fund_uuid "<fund_id>" --rationale "Update the reimbursement for the user"
 
 All required items resolved. Ready to submit:
-  Amount:    $12.50
+  Amount:    USD 12.50
   Merchant:  Blue Bottle Coffee
   Memo:      Coffee at Blue Bottle for team meeting
   Fund:      Social bonding & Team outings 2026
@@ -203,7 +213,7 @@ Submit for approval?
 
 User: yes
 
-Agent: > ramp reimbursements submit <reimbursement_id> --rationale "User confirmed submitting the $12.50 Blue Bottle reimbursement for approval"
+Agent: > ramp reimbursements submit <reimbursement_id> --rationale "User confirmed submitting the USD 12.50 Blue Bottle reimbursement for approval"
 Submitted! Your reimbursement is now pending approval.
 View it using the `reimbursement_link` returned by Ramp.
 ```
@@ -211,8 +221,7 @@ View it using the `reimbursement_link` returned by Ramp.
 ## When NOT to Use
 
 - **Approving reimbursements** — use ramp-approval-dashboard
-- **Uploading receipts to card transactions** — use ramp-receipt-compliance
-- **Editing memos or categories on card transactions** — use ramp-transaction-cleanup
+- **Uploading receipts to card transactions, or editing their memos/categories** — use ramp-complete-expenses
 - **Canceling an approved reimbursement** — tell the user to contact their manager or use the Ramp app
 
 ## Gotchas
@@ -226,4 +235,4 @@ View it using the `reimbursement_link` returned by Ramp.
 | `missing_tracking_categories` has entries | Use `--json` with `tracking_category_selections` to set them. Each entry in the missing list shows the `category_uuid` and `category_name` needed. |
 | `suggested_funds` may be empty | Fall back to `ramp funds list` to find available funds |
 | Large receipt files hit shell arg limits | For files >100KB, write base64 to a temp file and read it into the `--file_content_base64` flag |
-| Amount not editable via CLI | The amount comes from the receipt. If wrong, the user should create a new reimbursement with the correct receipt. |
+| Amount edit fails | Amount must be a positive value and can only be edited while the reimbursement is in `DRAFT`. `--amount` preserves the draft's existing currency, so use major units in that currency, then check `missing_items` and confirm both amount and currency before submitting. |

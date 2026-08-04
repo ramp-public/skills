@@ -7,8 +7,8 @@ description: |-
   'find a bill', 'show me pending bills', 'bill details', 'look up a bill',
   'draft bill details', 'bill attachments', 'what bills need my approval'.
   Do NOT use for: approving bills (use ramp-approval-dashboard), uploading vendor
-  documents (use ramp-vendor-document-upload), or card transaction management
-  (use ramp-transaction-cleanup).
+  documents (use ramp-manage-vendors), or card transaction management
+  (use ramp-complete-expenses).
 ---
 
 # Manage Bills
@@ -19,7 +19,7 @@ Search, inspect, and review vendor bills — submitted, draft, and pending appro
 
 - **Pass `--rationale` on every command** — it is a required field on these agent-tools (a non-empty string, max 1024 chars). With `--json`, supply it as a `"rationale"` key in the body. Omitting it returns `HTTP 422 (DEVELOPER_INVALID_SCHEMA)`, in both agent and human modes.
 - **Deep links**: If the response contains a `bill_url` field, always include it when presenting bill details — it lets the user click through to the Ramp web app. If the field is absent, direct the user to the Ramp bills page instead. Use the URL matching the active CLI environment: `https://app.ramp.com/bills` for production or `https://demo.ramp.com/bills` for sandbox. Run `ramp env` to check the current environment if unsure.
-- Bill amounts are in **cents**. Divide by 100 for display (e.g., `350000` → `$3,500.00`).
+- Bill amounts are numeric **major currency units**. Format the value for display as returned; never divide it by 100 (e.g., `3500` → `$3,500.00`).
 - Bill IDs are UUIDs. Always confirm the correct bill before acting on it.
 - Use `--agent` for machine-readable JSON output when parsing results programmatically.
 - These are **read-only** commands. For approvals, use `ramp-approval-dashboard`. For write operations on drafts, use draft bill commands when available.
@@ -49,7 +49,7 @@ If the response includes a `bill_url` field on each bill, present it alongside t
 
 ### Step 2: Get bill details
 
-Once you have a bill ID, pull comprehensive details:
+Once you have a bill ID, inspect the search row's `is_draft` field and pull comprehensive details with the matching command:
 
 ```bash
 # Full bill details (submitted bills only)
@@ -59,14 +59,19 @@ ramp bills get --bill_id "{bill_id}" --agent --rationale "Review bill details"
 ramp bills draft --bill_id "{bill_id}" --agent --rationale "Draft the bill"
 ```
 
+Use `ramp bills draft` when `is_draft` is `true`; otherwise use `ramp bills get`. Do not assume search results are submitted bills.
+If the selected command reports that the bill is in the other lifecycle stage, retry the alternate detail command with the same bill ID. A draft keeps the same ID when it is submitted, so its lifecycle may change after search.
+
 The `get` response includes: amount, currency, vendor info, approval status, payment status, due date, invoice number, line items, accounting field codings, and more. Use this as your primary tool for investigating a bill — it covers status, amount breakdowns, and metadata in a single call.
 
 If the response includes a `bill_url` field, it is a direct link to the bill in the Ramp web app. The URL routes to the correct page based on bill status (drafts, approvals, or paid).
 
 ### Step 3: Retrieve bill attachments
 
+The attachments command supports submitted bills only. Route this step from the lifecycle confirmed by the detail command that succeeded, including after a fallback: after `ramp bills get`, use the attachments command; after `ramp bills draft`, hand off through the draft's `bill_url` (or the environment-appropriate bills page when absent) so the user can inspect attachments in Ramp.
+
 ```bash
-# Get invoice file attachments
+# Get invoice file attachments for a submitted bill
 ramp bills attachments --bill_id "{bill_id}" --agent --rationale "Fetch bill attachments"
 ```
 
@@ -153,18 +158,17 @@ Common handoff scenarios:
 ## When NOT to Use
 
 - **Approving or rejecting bills** — use `ramp-approval-dashboard`
-- **Uploading vendor documents** (W-9, contracts) — use `ramp-vendor-document-upload`
-- **Transaction receipts** — use `ramp-receipt-compliance`
-- **Editing transaction memos or categories** — use `ramp-transaction-cleanup`
+- **Uploading vendor documents** (W-9, contracts) — use `ramp-manage-vendors`
+- **Transaction receipts, memos, or categories** — use `ramp-complete-expenses`
 - **Making payments or releasing funds** — not available via CLI
 
 ## Gotchas
 
 | Issue | Fix |
 |---|---|
-| Bill amounts are in cents | Divide by 100 for display |
+| Bill amounts are numeric major currency units | Format the returned value directly; never divide by 100 |
 | Paid bills are included by default | Pass `--no-include_paid` to exclude them |
-| `search` returns only submitted bills | Use `draft` for provisional/unsubmitted bills |
+| `search` can return drafts and submitted bills | Check each row's `is_draft`; use `draft` when true and `get` otherwise |
 | `get` returns 404 for a draft bill | Use `ramp bills draft --bill_id` instead |
 | Pagination cursor is an encrypted token | Pass the exact `next_page_cursor` value from the response; never fabricate one |
 | `bill_url` may be absent or null | Fall back to the environment-appropriate bills page (`app.ramp.com/bills` or `demo.ramp.com/bills`) — never fabricate a deep link |
