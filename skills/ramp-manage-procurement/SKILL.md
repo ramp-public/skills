@@ -59,10 +59,19 @@ contract edits.
 ## Workflow
 
 1. Search POs first when the user gives a PO number, vendor, or procurement
-   record:
+   record. `filters.search` matches PO numbers, request names, and owner names;
+   it does not match vendor names. For a vendor search, resolve the vendor UUID
+   first, then filter POs by `payee_uuids`:
 
    ```bash
-   ramp purchase_orders search --json '{"rationale":"Searching purchase orders by vendor or PO number","filters":{"search":"Figma"},"limit":10}' --agent
+   ramp vendors search --search_term "Figma" --limit 10 --rationale "Find the vendor UUID for the purchase order search" --agent
+   ramp purchase_orders search --json '{"rationale":"Searching purchase orders for the resolved vendor","filters":{"payee_uuids":["{vendor_uuid}"]},"limit":10}' --agent
+   ```
+
+   For a PO number, request name, or owner name, use `filters.search` directly:
+
+   ```bash
+   ramp purchase_orders search --json '{"rationale":"Searching purchase orders by PO number","filters":{"search":"PO-1234"},"limit":10}' --agent
    ```
 
    If a known PO number is not returned, the spend request may still be pending
@@ -70,7 +79,7 @@ contract edits.
    orders:
 
    ```bash
-   ramp requests search --json '{"rationale":"Searching purchase order requests before PO issuance","filters":{"search":"Figma","unified_spend_request_types":["PURCHASE_ORDER"]},"limit":10}' --agent
+   ramp requests search --json '{"rationale":"Searching purchase order requests before PO issuance","filters":{"search":"PO-1234","unified_spend_request_types":["PURCHASE_ORDER"]},"limit":10}' --agent
    ```
 
    Unified request search and pending rows include `unified_request_id` and may

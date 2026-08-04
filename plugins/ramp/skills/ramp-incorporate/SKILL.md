@@ -162,10 +162,11 @@ available via `ramp incorporation status` once the formation is submitted.
 
 ### Country handling
 
-This launch flow is US-only. No country lookup is required. Ramp defaults
-omitted applicant, member, responsible-party, and address country fields to
-`US`, and rejects non-US values for now. If you include a country or nationality
-field explicitly, use `US`.
+This launch flow is US-only. No country lookup is required. Applicant country
+fields may default to `US`, but every explicit fallback member address must
+include `"country": "US"`; member address country is required and is not
+defaulted. Member nationality is optional and defaults to `US`. Ramp rejects
+non-US country and nationality values for now.
 
 ### 2. Gather formation inputs
 
@@ -179,14 +180,20 @@ ramp incorporation industries search --q "<business description>" --agent
 Collect from the user:
 - **State**: where to incorporate (default: Delaware for most businesses)
 - **NAICS code**: from the industries search result
-- **Business description**: 1-2 sentences (not just the name)
 - **3 name options**: ranked list of LLC name preferences (Ramp files the first available)
-- **Mailing address**: for official correspondence, including phone number
+
+The formation create request accepts only optional `state`, `naics_code`, and
+`name_options`, plus conditional `members`. Business description, principal
+address, office phone, and other application data are not formation-create
+fields. If any of those values need to change, update the financing application
+separately through the `ramp-apply-for-account` application PATCH flow before
+submitting formation.
 
 Do not ask the user to repeat owner, member, responsible-party, controller, or
 SSN facts that are already on the Ramp application. In the normal submitted
-financing-application path, Ramp uses owner/controller data from the application and the formation
-payload only needs filing facts plus addresses.
+financing-application path, Ramp uses business, owner/controller,
+responsible-party, and address data from the application. The formation payload
+only supplies optional filing overrides.
 
 Before choosing the formation payload, inspect the submitted application:
 
@@ -261,39 +268,25 @@ identifiers or business details in diagnostics.
 Use the lean formation payload when the submitted Ramp application identifies
 one or more owners through the controlling officer or `beneficial_owners`.
 `members` and `responsible_party` are intentionally omitted; Ramp uses that
-data from the submitted financing application. Do not set
-SSN data in environment variables.
+data from the submitted financing application. Do not include `description`,
+`addresses`, `responsible_party`, or `rationale`; update application data
+separately when needed. Do not set SSN data in environment variables.
 
 ```bash
 ramp incorporation submit --json '{
   "state": "<chosen_state>",
   "naics_code": "<naics_code>",
-  "description": "<business_description>",
   "name_options": [
     {"name": "<option_1>", "entity_type_ending": "LLC"},
     {"name": "<option_2>", "entity_type_ending": "LLC"},
     {"name": "<option_3>", "entity_type_ending": "LLC"}
-  ],
-  "addresses": [
-    {"provider": "ramp", "address_type": "registered_agent"},
-    {
-      "provider": "user",
-      "address_type": "mailing",
-      "line1": "<street>",
-      "city": "<city>",
-      "state": "<state>",
-      "postal_code": "<zip>",
-      "country": "US",
-      "phone": "<e164_phone>"
-    }
-  ],
-  "rationale": "User confirmed filing the <option_1> LLC formation in <chosen_state>"
+  ]
 }' --agent
 ```
 
-The payload must carry a non-empty `"rationale"` (with `--json`, it goes in the
-body instead of a `--rationale` flag) — without it the submission is rejected
-with a validation error and no filing is created.
+All three fields shown above are optional when their values already exist on the
+submitted financing application. Do not add other top-level formation-create
+fields.
 
 For the valid no-25%-owner shape identified in Step 2, add a non-empty
 `members` list to that same payload. Collect these formation-specific member
@@ -302,7 +295,7 @@ facts even though the individuals are not 25%+ beneficial owners:
 - `legal_first_name` and `legal_last_name`
 - `is_natural_person`
 - residential `address` (`line1`, optional `line2`, `city`, `state`,
-  `postal_code`, and `country`)
+  `postal_code`, required `country`, and required E.164 `phone`)
 - `ownership_percent`
 - `contact_full_name`
 - optional `nationality`
@@ -324,7 +317,8 @@ unless the user confirms that person is actually an LLC member.
       "city": "<city>",
       "state": "<state>",
       "postal_code": "<zip>",
-      "country": "US"
+      "country": "US",
+      "phone": "+12065550100"
     },
     "ownership_percent": 100,
     "contact_full_name": "<contact_full_name>"
@@ -429,20 +423,11 @@ ramp incorporation applicant create --agent
 ramp incorporation submit --json '{
   "state": "DE",
   "naics_code": "541511",
-  "description": "SaaS platform for restaurant operations.",
   "name_options": [
     {"name": "Acme",        "entity_type_ending": "LLC"},
     {"name": "Acme Labs",   "entity_type_ending": "LLC"},
     {"name": "Acme Co",     "entity_type_ending": "LLC"}
-  ],
-  "addresses": [
-    {"provider": "ramp", "address_type": "registered_agent"},
-    {"provider": "user", "address_type": "mailing",
-     "line1": "...", "city": "San Francisco", "state": "CA",
-     "postal_code": "94105", "country": "US",
-     "phone": "+14155550100"}
-  ],
-  "rationale": "User confirmed filing the Acme LLC formation in Delaware"
+  ]
 }' --agent
 # → SUBMITTED (limited pre-EIN access; EIN still pending)
 
@@ -480,8 +465,8 @@ If `ramp incorporation status` returns `REJECTED` with `reason: NAME_CONFLICT`:
 | Multiple `ramp` binaries are installed | Use one explicit CLI path for every command in the applicant create/get + submit sequence; do not mix Homebrew and editable/uv-installed binaries. |
 | Guidance asks for `members`, `responsible_party`, or SSN environment variables | Use the lean submit payload when the submitted financing application identifies an owner. Use `members` only for the confirmed no-25%-owner fallback; never send `responsible_party` or collect SSN environment variables. |
 | No-25%-owner application needs formation members | After FA submission, confirm the controller is not a beneficial owner and `beneficial_owners` is empty; send a non-empty `members` list whose ownership totals 100 instead of retrying the lean payload |
-| Formation company addresses | Send exactly two entries: `{"provider": "ramp", "address_type": "registered_agent"}` plus a `{"provider": "user", "address_type": "mailing", ...}` customer mailing address. |
-| Country codes | Use `US` for mailing address country. Ramp defaults omitted country fields to `US` and currently rejects non-US values. |
+| Business description, address, or office phone needs correction | Update the financing application through its PATCH flow before formation submit; do not add these fields to the formation payload. |
+| Fallback member address country or phone omitted | Every explicit member address requires `country: "US"` and an E.164 `phone` such as `+12065550100`; member country is not defaulted. |
 | Formation takes days | Poll `ramp incorporation status` every few hours; do not re-submit while PENDING_REVIEW or SUBMITTED |
 | Docs not available yet | Documents appear after APPROVED; poll `ramp incorporation documents` |
 

@@ -9,13 +9,14 @@ description: |-
   'inference costs', 'total spend', 'spend by vendor', 'spend analysis',
   'pull transactions for', 'cost breakdown'.
   Do NOT use for: approving transactions (use ramp-approval-dashboard), uploading receipts
-  (use ramp-receipt-compliance), or verifying a single bill payment (use ramp-payment-lookup).
+  (use ramp-complete-expenses), or verifying a single bill payment (use ramp-payment-lookup).
 ---
 
 ## Non-Negotiables
 
 - **Pass `--rationale` on every command** — it is a required field on these agent-tools (a non-empty string, max 1024 chars). With `--json`, supply it as a `"rationale"` key in the body. Omitting it returns `HTTP 422 (DEVELOPER_INVALID_SCHEMA)`, in both agent and human modes.
-- Always query both **transactions** and **bills** for complete vendor spend. Card charges and bill payments are separate resources — there is no unified spend endpoint.
+- Always query both **transactions** and **bills** when investigating complete vendor spend. Card charges and bill payments are separate resources — there is no unified spend endpoint.
+- Never treat a search result's bill `amount` as paid-in-period spend. It is the full invoice amount, and a payment-date match may represent only one partial payment. A complete paid total requires payment-allocation amounts and dates from another source.
 - Pass `--agent` for machine-readable JSON output on all commands.
 - Handle amount format differences: transactions use strings (`"$1,048.25"`, `"-$259.49"`), bills use numbers (`15000`), PO amounts use numbers. Reimbursement amounts are in dollars.
 - Paginate until `next_page_cursor` is null — a single page may not return everything.
@@ -59,18 +60,22 @@ ramp transactions list \
 For a specific vendor:
 
 ```bash
-ramp bills search --query "<vendor>" --include_paid --limit 50 --agent --rationale "Search bills for the user"
+ramp bills search --query "<vendor>" --include_paid \
+  --from_payment_date <YYYY-MM-DD> --to_payment_date <YYYY-MM-DD> \
+  --limit 50 --agent --rationale "Search bills paid during the user's requested period"
 ```
 
 For broad analysis (all vendors):
 
 ```bash
-ramp bills list --include_paid --limit 50 --agent --rationale "List bills for the user"
+ramp bills search --include_paid \
+  --from_payment_date <YYYY-MM-DD> --to_payment_date <YYYY-MM-DD> \
+  --limit 50 --agent --rationale "Search all bills paid during the user's requested period"
 ```
 
-Repeat either with `--page_cursor` if `next_page_cursor` is not null.
+Repeat either with `--page_cursor` if `next_page_cursor` is not null, preserving the same query and date bounds on every page.
 
-**Note:** `bills search` has no date range filter and returns `due_date` but not `payment_date`. For date-bounded actual spend, drill into paid bills with `ramp bills get <id> --agent` to get `payment_date`, then filter by that. If drilling into every bill is impractical, filter by `due_date` but label the result as "bills due in period" rather than "spend in period." Bills with `payment_status: "OPEN"` are unpaid — report them separately as commitments.
+**Note:** Use `from_payment_date` and `to_payment_date` to find bills with payment activity in the period, then use each result's `payment_date` when presenting or validating the period. Do not substitute `due_date`: it describes when payment was due, not when spend was paid. A matched bill may be partially paid, while its `amount` is the full invoice amount. Do not add that amount to actual spend without payment-allocation data. Bills with `payment_status: "OPEN"` are unpaid — report them separately as commitments.
 
 ### Step 3: Parse and aggregate
 
@@ -81,11 +86,14 @@ Repeat either with `--page_cursor` if `next_page_cursor` is not null.
 ... | jq '[.data[0].transactions[].amount | gsub(","; "") | if startswith("-$") then ltrimstr("-$") | tonumber | (. * -1) elif startswith("$") then ltrimstr("$") | tonumber else tonumber end] | add'
 ```
 
-#### Bill amounts (already numeric, filter to paid only for actual spend)
+#### Bill amounts are invoice amounts, not paid amounts
 
-```bash
-... | jq '[.data[0].bills[] | select(.payment_status == "PAID") | .amount] | add'
-```
+Use bill search to identify payment activity and relevant bill IDs. Do not sum
+`BillInfo.amount` as paid-in-period spend: payment-date filtering can match one
+installment of a partially paid bill while `amount` remains the full invoice
+amount. Only combine bills into an actual-spend total when payment-allocation
+amounts and dates are available; otherwise present the card subtotal and matched
+bills separately, and label the complete paid total unavailable.
 
 #### Multi-vendor table with pagination
 
@@ -142,19 +150,19 @@ Format as a clear table:
 ```
 Vendor Spend: 2026-01-01 to 2026-04-01
 
-Vendor              Card Txns    Bills       Total
-─────────────────────────────────────────────────
-Figma               $24.00       $0.00       $24.00       (3 card txns)
-Delta Airlines      $3,663.73    $0.00       $3,663.73    (5 card txns, 2 merchant name variants)
-AWS                 $12,450.00   $8,200.00   $20,650.00   (8 card txns, 2 bills)
+Vendor              Card Spend    Bills Matched    Complete Paid Total
+─────────────────────────────────────────────────────────────────────
+Figma               $24.00        0                $24.00
+Delta Airlines      $3,663.73     0                $3,663.73
+AWS                 $12,450.00    2                Requires payment-allocation data
 
-Total: $24,337.73
+Confirmed card subtotal: $16,137.73
 ```
 
 Call out:
 - **Vendor name variants** found (e.g., "Delta Air Lines" + "Delta Airlines")
 - **Refunds** included in the totals
-- **Bills vs transactions** breakdown if both exist for a vendor
+- **Bills vs transactions** breakdown if both exist for a vendor; do not add full invoice amounts to paid spend
 - **Pagination** — whether all results were captured or if there are more pages
 
 ## Fields Available
@@ -179,8 +187,9 @@ Call out:
 |---|---|
 | `id` | Bill UUID |
 | `vendor_name` | Payee name |
-| `amount` | Numeric (dollars) |
+| `amount` | Full invoice amount in dollars; not necessarily the amount paid in the requested period |
 | `invoice_number` | Vendor invoice number |
+| `payment_date` | Displayed payment date, typically the scheduled or sent date |
 | `payment_status` | Payment state |
 | `memo` | Bill description |
 
@@ -224,10 +233,13 @@ User: How much have we spent on Figma this year?
 Agent: Let me pull both card transactions and bills.
 > ramp transactions list --transactions_to_retrieve all_transactions_across_entire_business \
 >   --reason_memo_merchant_or_user_name_text_search "Figma" \
->   --from_date 2026-01-01 --include_count --agent --rationale "List the user's transactions"
-> ramp bills search --query "Figma" --include_paid --limit 50 --agent --rationale "Search bills for the user"
+>   --from_date 2026-01-01 --to_date 2026-04-01 --include_count --agent \
+>   --rationale "List the user's transactions"
+> ramp bills search --query "Figma" --include_paid --from_payment_date 2026-01-01 \
+>   --to_payment_date 2026-04-01 --limit 50 --agent \
+>   --rationale "Search Figma bills paid during the user's requested period"
 
-Figma spend YTD (2026-01-01 to today):
+Figma spend (2026-01-01 to 2026-04-01):
 
   Card transactions: 3 totaling $24.00
     $8.00  Michael Scott  2026-03-17  "Trial spend for one Sales user"
@@ -243,32 +255,37 @@ if you want to check commitment vs actual spend.
 
 User: Give me a full SaaS vendor breakdown
 
-Agent: Pulling all transactions and grouping by merchant...
+Agent: Pulling all card transactions and bills with payment activity, then matching them by vendor...
 > ramp transactions list --transactions_to_retrieve all_transactions_across_entire_business \
->   --from_date 2026-01-01 --page_size 200 --include_count --agent --rationale "List the user's transactions"
+>   --from_date 2026-01-01 --to_date 2026-04-01 --page_size 200 --include_count \
+>   --agent --rationale "List the user's transactions"
+> ramp bills search --include_paid --from_payment_date 2026-01-01 \
+>   --to_payment_date 2026-04-01 --limit 50 --agent \
+>   --rationale "Search all bills paid during the user's requested period"
+> # Paginate both searches to completion, then merge by vendor.
 
-SaaS Vendor Spend YTD:
+SaaS Vendor Spend Review (2026-01-01 to 2026-04-01):
 
-Vendor              Total         Txns
-────────────────────────────────────────
-Brown Group         $50,000.00    1
-Cochran Ltd         $21,500.00    1
-Goody               $9,119.13     3
-Morris-Allen        $8,900.00     1
-Figma               $24.00        3
+Vendor              Card Spend    Bills Matched    Complete Paid Total
+─────────────────────────────────────────────────────────────────────
+Brown Group         $50,000.00    1                Requires payment-allocation data
+Cochran Ltd         $21,500.00    0                $21,500.00
+Goody               $9,119.13     2                Requires payment-allocation data
+Morris-Allen        $8,900.00     0                $8,900.00
+Figma               $24.00        1                Requires payment-allocation data
 
 ⚠ Vendor name variants detected:
   "Delta Air Lines" (2 txns) + "Delta Airlines" (5 txns) — likely same vendor
 
-Note: This only includes card transactions. Bill payments are separate —
-want me to also search bills for these vendors?
+Bill matches were filtered by `payment_date`, but their full invoice amounts were
+not added to spend. Payment-allocation data is required to complete those totals.
 ```
 
 ## When NOT to Use
 
 - **Verifying a single payment** — use `ramp-payment-lookup`
 - **Approving transactions** — use `ramp-approval-dashboard`
-- **Receipt or memo cleanup** — use `ramp-receipt-compliance` or `ramp-transaction-cleanup`
+- **Receipt or memo cleanup** — use `ramp-complete-expenses`
 - **Detailed PO status** — run `ramp purchase_orders get` directly
 
 ## Gotchas
@@ -276,10 +293,10 @@ want me to also search bills for these vendors?
 | Issue | Fix |
 |---|---|
 | Transaction amounts are strings (`"$1,048.25"`) | Strip `$` and `,` before summing. Handle `-$` prefix for refunds. |
-| Bill amounts are numeric (dollars) | Use directly — no parsing needed |
+| Bill amounts are numeric (dollars) | They are full invoice amounts. Do not sum them as paid-in-period spend without payment-allocation data. |
 | `--transactions_to_retrieve` is required | Always include it. Use `all_transactions_across_entire_business` for company-wide analysis. |
 | Search text must be ≥3 characters | "AI" won't work — use full vendor name |
-| `bills search` has no date filter | Search returns `due_date` not `payment_date`. Use `bills get` for actual payment dates. Use `bills list` for no-query pulls. |
+| Paid-in-period bill activity | Pass `--from_payment_date` and `--to_payment_date` to `bills search`, and use the returned `payment_date`. Do not fall back to `due_date` or treat full invoice `amount` as the paid allocation. |
 | Vendor name variants not normalized | Run multiple searches for known variants. Dedupe by `transaction_uuid`. |
 | Pagination ceiling | `--page_size 200` is accepted. Still check `next_page_cursor`. |
 | No unified spend endpoint | Query transactions and bills separately, then merge the results. |

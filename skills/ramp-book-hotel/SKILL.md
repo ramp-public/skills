@@ -189,9 +189,9 @@ Render one row for every returned `all_rates[].rates[]` option:
 | 1 | Deluxe King | $245 USD | $271 USD | $812 USD | Pay later | Refundable | Free until Aug 8 | In policy | Four Seasons | Recommended; Company preferred |
 
 - Use the room group's `room_name`, `room_description`, and `room_amenities`. Mark a group as
-  recommended only when it also appears in `recommended_rates`; do not infer recommendations from
-  list order or `best_rate`. `best_rate` is the lowest-total option within that room group, not a
-  global recommendation.
+  recommended only when it also appears in `display_ui_recommended_cards`; do not infer
+  recommendations from list order or `best_rate`. `best_rate` is the lowest-total option within
+  that room group, not a global recommendation.
 - Show each rate's `nightly_amount`, `all_in_nightly_amount`, `total_amount`, `payment_type`,
   `refundability`, and `cancellation_policy` when present. Show amount strings exactly as returned
   and include the separate `currency` once; do not append it when the amount already includes it.

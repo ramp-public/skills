@@ -227,6 +227,11 @@ only when a visible file field's label or help text matches the file's purpose,
 such as a contract, quote, invoice, or supporting document. An already-answered
 visible file field may accept an intentional additional or replacement file.
 
+`procurement_requests upload-file` is CLI-only, even though this skill also
+supports MCP. MCP callers must not attempt this command; hand off the file
+attachment step to a CLI-capable caller, then resume with the refreshed draft
+state after the attachment is applied.
+
 ```bash
 ramp procurement_requests upload-file "<file_field_id>" "<spend_request_uuid>" --file "/absolute/path/to/file.pdf" --rationale "Upload the document requested by the procurement form" --agent
 ```

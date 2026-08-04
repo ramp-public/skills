@@ -17,7 +17,7 @@ description: |-
 - Rejections require a reason. Approvals do not, but a note is helpful.
 - Confirm with the user before executing approvals — especially bulk operations.
 - Present items sorted by priority: highest dollar amount first.
-- Amounts vary by endpoint: bills are in **cents** (divide by 100), reimbursements are in **dollars**, transactions are formatted strings ("$135.40").
+- Amounts vary by endpoint: bill `amount` values are numeric **major currency units**; display them directly with the accompanying `currency` and never divide by 100. When totaling bills, group subtotals by `currency`; never combine different currencies or include them in a cross-queue aggregate. Reimbursements are in **dollars**, and transactions are formatted strings ("$135.40").
 - **Deep links**: If the response contains a `bill_url` (bills) or `reimbursement_link` (reimbursements) field, include it when presenting entity details so the user can click through to the Ramp web app. If these fields are absent, direct the user to the relevant Ramp page (e.g., `https://app.ramp.com/bills`) instead. Never fabricate deep link URLs.
 
 ## Workflow
@@ -48,11 +48,11 @@ For each endpoint, check `pagination.next_cursor` in the JSON envelope. If it is
 Summarize what's pending. If the response includes `bill_url` or `reimbursement_link` fields, include them so the user can open items directly in the Ramp web app:
 
 ```
-Approval queue: 14 items ($23,450 total)
+Approval queue: 14 items
 
-Bills (4 items, $8,200):
-  $3,500  HighSpot        Invoice #1234    Due 2026-03-28  → <bill_url if present>
-  $2,500  Cometeer        Invoice #5678    Due 2026-04-01  → <bill_url if present>
+Bills (4 items):
+  USD 3,500  HighSpot        Invoice #1234    Due 2026-03-28  → <bill_url if present>
+  USD 2,500  Cometeer        Invoice #5678    Due 2026-04-01  → <bill_url if present>
   ...
 
 Reimbursements (6 items, $2,100):
@@ -158,11 +158,11 @@ Agent: Let me check all your pending queues.
 > ramp reimbursements pending --agent --limit 50 --rationale "Review reimbursements pending approval"
 > ramp requests pending --thoughts "Checking approval queue" --page_size 50 --agent --rationale "Review pending requests"
 
-Approval queue: 6 items ($4,350 total)
+Approval queue: 6 items
 
-Bills (2 items, $2,700):
-  $2,200  HighSpot        Invoice #4401    Due 2026-03-28
-  $  500  Cometeer        Invoice #882     Due 2026-04-01
+Bills (2 items):
+  USD 2,200  HighSpot        Invoice #4401    Due 2026-03-28
+  USD   500  Cometeer        Invoice #882     Due 2026-04-01
 
 Reimbursements (3 items, $1,430):
   $  520  Michael Scott   Uber rides       Submitted 2026-03-20
@@ -208,21 +208,20 @@ When the agent hits a limitation — bill approvals aren't supported via CLI, or
 Example handoff message (when `bill_url` is present):
 ```
 I can't approve bills via the CLI. You can approve this bill directly in Ramp:
-  $3,500 HighSpot Invoice #1234 → <bill_url>
+  USD 3,500 HighSpot Invoice #1234 → <bill_url>
 ```
 
 Always prefer deep link fields from the API response when available — they account for bill status and environment. Never fabricate deep link URLs.
 
 ## When NOT to Use
 
-- **Uploading receipts** — use ramp-receipt-compliance
-- **Editing transaction memos or categories** — use ramp-transaction-cleanup
+- **Uploading receipts or editing transaction memos/categories** — use ramp-complete-expenses
 
 ## Gotchas
 
 | Issue | Fix |
 |---|---|
-| Bill amounts are in cents | Divide by 100 for display |
+| Bill amounts are numeric major currency units | Display the `amount` directly with `currency`; never divide by 100. Group totals by `currency` and never sum mixed currencies |
 | Reimbursement amounts are in dollars | Display as-is |
 | Transaction amounts are formatted strings | Strip "$" and "," for sorting/totaling |
 | `requests pending` requires `--thoughts` | Always include it — describe what you're doing |

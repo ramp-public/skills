@@ -64,13 +64,34 @@ the `members` field.
 ramp funds list --funds_to_retrieve MY_FUNDS --include_lock_info --rationale "inspect fund and card lock details" --agent
 ```
 
-### Step 4: Activate or lock a card
+### Step 4: Activate a physical card
 
-Activate a physical card by its last four digits:
+First call activation by the physical card's last four digits without
+`--confirm_delivery`:
 
 ```bash
 ramp cards activate --last_four 1234 --rationale "activate the user's new physical card" --agent
 ```
+
+If the result says delivery confirmation is required, ask the user to confirm
+that the physical card has arrived. Only after they confirm, retry with
+`--confirm_delivery`:
+
+```bash
+ramp cards activate --last_four 1234 --confirm_delivery --rationale "user confirmed their physical card arrived" --agent
+```
+
+Do not ask about delivery or set `--confirm_delivery` unless the first call says
+it is required.
+
+### Step 5: Lock or unlock a card
+
+Before locking, inspect and show the user the affected card, explain that
+locking it will block all transactions until it is unlocked, and ask for
+explicit confirmation. Run the lock command only after the user confirms.
+Do not infer confirmation from a report of suspicious activity or a lost card.
+
+Unlocking does not require confirmation.
 
 Lock or unlock a card by its id. The id is a required positional argument:
 
@@ -78,9 +99,6 @@ Lock or unlock a card by its id. The id is a required positional argument:
 ramp cards lock 7f3c0d2a-9b1e-4a55-8c21-0e9d6b2f4a10 --action lock --rationale "user lost their card" --agent
 ramp cards lock 7f3c0d2a-9b1e-4a55-8c21-0e9d6b2f4a10 --action unlock --rationale "user found their card" --agent
 ```
-
-The same write tools are also available under `funds` using their full command
-names, for example `ramp funds activate` and `ramp funds lock-or-unlock-card`.
 
 ## Fields To Inspect
 

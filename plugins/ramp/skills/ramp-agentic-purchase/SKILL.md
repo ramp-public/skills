@@ -2,7 +2,7 @@
 name: ramp-agentic-purchase
 area: Agentic Commerce
 supported_surfaces: [browser, cli, mcp]
-description: "Make purchases using Ramp agent cards via browser checkout, then complete all transaction requirements (memo, tracking categories, receipt, trip). Use when asked to buy something with an agent card, make a payment using Ramp, spend from a fund, complete missing transaction items, or test the agent card payment flow. Also use when asked about agent card access, availability, or how to get started with Agentic Cards. Requires ramp CLI and ramp-browser-automation skill."
+description: "Make purchases using Ramp agent cards via browser checkout, then complete all transaction requirements (memo, tracking categories, receipt, trip). Use when asked to buy something with an agent card, make a payment using Ramp, spend from a fund, complete missing transaction items, or test the agent card payment flow. Also use when asked about agent card access, availability, or how to get started with Agentic Cards. Requires ramp CLI and a playwright-cli-driven browser (see bundled browser-checkout.md)."
 ---
 
 # Agentic Purchase
@@ -14,10 +14,10 @@ End-to-end agent card purchasing: pick a fund, get a payment token via `ramp` CL
 Agent Cards are available via self-serve enrollment. **Enrollment is a mutation** — it enrolls the authenticated user's business in Agent Cards, enabling agent card funds and fund access. An availability, setup, or eligibility question is **not** consent to enroll: first answer the question, tell the user that enrolling activates Agent Cards for their business, and ask for explicit confirmation. Only after the user confirms, enroll using the CLI:
 
 ```bash
-ramp funds enroll --agent --rationale "User confirmed enrolling the business in Agent Cards"
+ramp agent_cards enroll --agent --rationale "User confirmed enrolling the business in Agent Cards"
 ```
 
-The user must be authenticated (`ramp auth login`) and have appropriate permissions on their Ramp business. Once enrollment succeeds, the user can immediately use `funds list` and `funds creds` to access their agent card funds.
+The user must be authenticated (`ramp auth login`) and have appropriate permissions on their Ramp business. Once enrollment succeeds, the user can immediately use `agent_cards list` and `agent_cards creds` to access their agent card funds.
 
 For more information, visit **https://agents.ramp.com/cards**.
 
@@ -25,22 +25,22 @@ Use this guidance for:
 
 - "What are Agentic Cards?" or "How do I get agent cards?"
 - Access, availability, enrollment, or setup questions
-- Users who hit eligibility errors when running `funds list` or `funds creds`
+- Users who hit eligibility errors when running `agent_cards list` or `agent_cards creds`
 
-In every case, describe what enrollment does and get an explicit "yes" before running `funds enroll`.
+In every case, describe what enrollment does and get an explicit "yes" before running `agent_cards enroll`.
 
 If the user is already enrolled, proceed with the workflow below.
 
 ## Prerequisites
 
 - `ramp` CLI installed and authenticated (`ramp auth login`)
-- `ramp-browser-automation` skill available for browser checkout
+- `playwright-cli` browser automation set up per the bundled [browser-checkout.md](browser-checkout.md) reference (formerly the standalone ramp-browser-automation skill, now shipped inside this skill)
 - Business enrolled in Agent Cards (see [Access & Enrollment](#access--enrollment) to enroll if not)
 
 ## CLI conventions
 
-- Pass `--agent` for machine-readable JSON output (documented shape is top-level, immediately after `ramp`: `ramp --agent funds list`)
-- Use positional arguments where supported (e.g., `ramp --agent funds creds <fund_uuid>`, `ramp --agent transactions missing <transaction_uuid>`)
+- Pass `--agent` for machine-readable JSON output (documented shape is top-level, immediately after `ramp`: `ramp --agent agent_cards list`)
+- Use positional arguments where supported (e.g., `ramp --agent agent_cards creds <fund_uuid>`, `ramp --agent transactions missing <transaction_uuid>`)
 - Use `--json` for complex payloads (e.g., `ramp --agent transactions edit`)
 - Every subcommand accepts `--json`, `--dry_run` (`-n`), and `--help`
 - **`--rationale` is required on every subcommand** — a non-empty string (max 1024 chars) explaining why you are making the call. With `--json`, put it in the body as a `"rationale"` key instead. Omitting it returns `HTTP 422 (DEVELOPER_INVALID_SCHEMA)`, even in `--agent` mode.
@@ -49,21 +49,21 @@ If the user is already enrolled, proceed with the workflow below.
 
 - **Two distinct amount thresholds — respect both:**
   - **User preauth tolerance:** policy-level, ~10% over requested. Stop and re-ask if exceeded.
-  - **Visa cryptogram auth cap:** the cryptogram from `ramp --agent funds creds ... --amount X` rejects any charge > X at the network level — even $0.01 over declines. If the merchant's final total exceeds the cryptogram amount (bag fees, surprise tax, currency conversion), the old cryptogram is unusable — burn it, pull fresh creds at the corrected amount, and re-preauth if the new amount exceeds the user's original 10% tolerance.
-- **Run the browser headed, never `--headless`.** Purchase flows need the user able to see and intervene — bot checks, 3DS, and login walls all require human input. See `ramp-browser-automation` for the headed-default rule.
-- **Stop if anything unexpected happens.** 3DS challenge, login wall, CAPTCHA, bot-block page, merchant form you can't parse → screenshot, hand off to the user via the visible Chrome window per the human-handoff pattern in `ramp-browser-automation`, and wait. Do not retry blindly.
+  - **Visa cryptogram auth cap:** the cryptogram from `ramp --agent agent_cards creds ... --amount X` rejects any charge > X at the network level — even $0.01 over declines. If the merchant's final total exceeds the cryptogram amount (bag fees, surprise tax, currency conversion), the old cryptogram is unusable — burn it, pull fresh creds at the corrected amount, and re-preauth if the new amount exceeds the user's original 10% tolerance.
+- **Run the browser headed, never `--headless`.** Purchase flows need the user able to see and intervene — bot checks, 3DS, and login walls all require human input. See [browser-checkout.md](browser-checkout.md) for the headed-default rule.
+- **Stop if anything unexpected happens.** 3DS challenge, login wall, CAPTCHA, bot-block page, merchant form you can't parse → screenshot, hand off to the user via the visible Chrome window per the human-handoff pattern in [browser-checkout.md](browser-checkout.md), and wait. Do not retry blindly.
 
 ## Phase 1: Payment
 
 ### Step 1 — Pick a fund
 
 ```bash
-ramp funds list --agent --rationale "List the user's funds"
+ramp agent_cards list --agent --rationale "List the user's agent card funds"
 ```
 
-First select for purpose fit, then technical eligibility:
+The response contains `funds`, each with `id`, `display_name`, `available_balance`, `currency`, `interval`, `max_transaction_amount`, `allowed_merchants`, and `allowed_categories`. Select for purpose fit first, then technical eligibility:
 
-- Match the merchant and purchase purpose to the fund's intended use before considering balance or access.
+- Use `display_name` to identify likely purpose fit, then confirm the choice with the user. Do not infer an intended use that is not present in the response.
 - Treat broad, admin, or shared-access funds as a hazard: technical access is not approval, and the purpose-fit bar is higher when many funds are visible.
 - If no appropriate fund exists, stop and ask the user which fund to use or whether to proceed through the standard card request/approval flow. Do not keep trying broad/admin funds automatically.
 
@@ -71,7 +71,11 @@ Then verify the selected fund has:
 
 - `available_balance` covers the purchase amount
 - `currency` matches the merchant
+- `max_transaction_amount` is `null` or covers the purchase amount
 - `allowed_merchants` / `allowed_categories` permit the purchase (empty = unrestricted)
+- `interval` is the fund's replenishment cadence, not additional balance available for the current purchase
+
+Use the selected fund's `id` as `<fund_uuid>` when requesting credentials.
 
 **Guest-checkout PII:** If no signed-in merchant account (header shows "Sign in"), guest checkout needs full name, email, phone, and shipping/billing address. Do NOT proxy these from `cardholder_name` / `billing_address` on the creds — those are for the payment form only, not the merchant's contact fields. Ask the user explicitly.
 
@@ -79,10 +83,10 @@ Then verify the selected fund has:
 
 ### Step 2 — Get payment token
 
-Run `funds creds` only after the user confirms the selected fund, merchant/amount, and rationale.
+Run `agent_cards creds` only after the user confirms the selected fund, merchant/amount, and rationale.
 
 ```bash
-ramp --agent funds creds "<fund_uuid>" \
+ramp --agent agent_cards creds "<fund_uuid>" \
   --amount "45.00" \
   --currency_code "USD" \
   --merchant_name "Children's Hunger Fund" \
@@ -103,7 +107,7 @@ Returns `pan`, `cvv`, `expiration_month`, `expiration_year`.
 
 ### Step 3 — Pay via browser
 
-Load the `ramp-browser-automation` skill, then:
+Read the bundled [browser-checkout.md](browser-checkout.md) reference (setup, `pw` usage, handoff patterns), then:
 
 1. Open merchant site:
    ```bash
@@ -291,7 +295,7 @@ Confirm all items resolved: `missing_receipt: false`, `missing_memo: false`, `mi
 
 | Error                                | Action                                                                       |
 | ------------------------------------ | ---------------------------------------------------------------------------- |
-| No agent card access                 | Enroll the business via `ramp funds enroll --agent`, then retry |
+| No agent card access                 | Enroll the business via `ramp agent_cards enroll --agent`, then retry |
 | Fund not eligible / no eligible card | Re-run purpose-first selection; if no appropriate eligible fund exists, ask the user instead of trying broad/admin funds automatically |
 | Insufficient balance                 | Pick a fund with more balance                                                |
 | Credential retrieval failed          | Retry once, then try a different fund                                        |
@@ -300,21 +304,21 @@ Confirm all items resolved: `missing_receipt: false`, `missing_memo: false`, `mi
 | Card form submitted but nothing happens (button enabled, no error, no processing, no spinner) after 15s | Suspected silent tokenizer rejection of synthetic property-setter fills. Close form, re-open, re-fill via real keystrokes. |
 | Final charge amount exceeds cryptogram auth | Cryptogram caps at `--amount`. Burn current creds, pull fresh at new amount. Re-preauth if > 10% over original. |
 | Pre-existing items in cart from prior session | Remove them (or ask the user to) before generating creds. |
-| 3DS challenge                        | Stop. Screenshot, then tell the user to complete 3DS in the visible Chrome window and reply when done. Resume Phase 2 once the card clears. See human-handoff in `ramp-browser-automation`. |
-| CAPTCHA / reCAPTCHA / bot-check page | Stop. If the browser is headless, `./pw stop` and re-open headed first — the user cannot interact otherwise. Then screenshot and hand off per human-handoff in `ramp-browser-automation`. Do not attempt a programmatic solve. |
+| 3DS challenge                        | Stop. Screenshot, then tell the user to complete 3DS in the visible Chrome window and reply when done. Resume Phase 2 once the card clears. See human-handoff in [browser-checkout.md](browser-checkout.md). |
+| CAPTCHA / reCAPTCHA / bot-check page | Stop. If the browser is headless, `./pw stop` and re-open headed first — the user cannot interact otherwise. Then screenshot and hand off per human-handoff in [browser-checkout.md](browser-checkout.md). Do not attempt a programmatic solve. |
 | Merchant shows "declined"            | A BIN decline at one processor (e.g., Vantiv eProtect at CVS) does NOT predict decline at another (e.g., Stripe at Anthropic) — each has its own risk engine. Report the merchant AND the processor (identifiable from the payment iframe's `src` if possible) so we track the BIN-vs-processor matrix. Do not retry at the same merchant. |
 
 ### Tips
 
-- Each `funds creds` call generates a fresh CVV. If you need to retry a checkout, call `creds` again first.
+- Each `agent_cards creds` call generates a fresh CVV. If you need to retry a checkout, call `creds` again first.
 - Prefer merchants with single-page checkout forms over multi-step embedded widgets.
 - Some merchants have minimum transaction amounts — check before attempting small purchases.
 
 ## Workflow summary
 
 ```
-funds list → pick fund
-  → funds creds → get PAN/CVV
+agent_cards list → pick fund
+  → agent_cards creds → get PAN/CVV
     → browser: open merchant → fill payment → submit
       → transactions list → find txn
         → transactions missing → check gaps
