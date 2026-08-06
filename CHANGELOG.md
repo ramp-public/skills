@@ -5,6 +5,21 @@ All notable changes to this catalog are documented here. This project adheres to
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-06
+
+### Added
+
+- Portable `plugin.json` conforming to the Agent Plugins v1.0.0 specification.
+- Portable `mcp.json` with `$schema` and `type: "streamable-http"` per the Agent Plugins MCP
+  schema.
+- CI workflow (`validate-plugin.yml`) that validates portable manifests against the versioned
+  Agent Plugins schemas, checks version consistency across portable and native manifests, and
+  validates SKILL.md frontmatter.
+
+### Changed
+
+- Bumped plugin version to 0.3.0 across all manifests (portable and native).
+
 ## [0.2.0] - 2026-07-24
 
 ### Added

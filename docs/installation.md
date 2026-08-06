@@ -28,13 +28,13 @@ Use `npx skills check` to preview updates and `npx skills update` to install the
 
 ## Install as a plugin
 
-The repository contains one shared plugin bundle at `plugins/ramp/`. Root marketplace manifests expose that bundle to Claude, Codex, and Cursor:
+The repository contains one shared plugin bundle at `plugins/ramp/` that conforms to the [Agent Plugins v1.0.0](https://agent-plugins.org) specification. The portable `plugin.json` and `mcp.json` at the plugin root work with any spec-compliant client. Root marketplace manifests expose the bundle to Claude, Codex, and Cursor:
 
 - `.claude-plugin/marketplace.json`
 - `.agents/plugins/marketplace.json`
 - `.cursor-plugin/marketplace.json`
 
-Each platform reads its own plugin manifest from `plugins/ramp/`. The skills and assets are shared rather than copied into separate platform bundles.
+Each platform reads its own native manifest from `plugins/ramp/` for client-specific metadata. The portable manifest, skills, and assets are shared rather than copied into separate platform bundles.
 
 ## Choose a tool connection
 
