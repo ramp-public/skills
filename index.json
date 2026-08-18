@@ -33,7 +33,7 @@
     },
     {
       "name": "ramp-book-flight",
-      "description": "Books flights conversationally through the ramp CLI: resolves cities to airports, searches one-way and round-trip flights, presents and compares offers, previews the fare, and tickets the booking on the traveler's explicit approval. The user describes a trip in plain language ('book a flight from Toronto to SFO') and never needs to know a CLI command. Use when someone wants to book, find, search, or compare flights, or says 'fly from X to Y'. Not for cancellations, changes, refunds, seat selection, loyalty programs, hotels, cars, or multi-city trips.",
+      "description": "Books flights conversationally through the ramp CLI: resolves cities to airports, searches one-way and round-trip flights, presents and compares offers, previews the fare, and tickets the booking on the traveler's explicit approval. Also cancels an existing flight booking with a preview-then-confirm flow when the cancellation capability is enabled. The user describes a trip in plain language ('book a flight from Toronto to SFO') and never needs to know a CLI command. Use when someone wants to book, find, search, or compare flights, says 'fly from X to Y', or wants to cancel a flight they booked. Not for changes, refund-status follow-ups, seat selection, hotels, cars, or multi-city trips.",
       "area": "Travel",
       "supported_surfaces": [
         "cli",
@@ -43,7 +43,7 @@
     },
     {
       "name": "ramp-book-hotel",
-      "description": "Searches and books hotels conversationally through the Ramp CLI: resolves the traveler, searches paginated hotel inventory, compares the selected room-rate returned for each hotel, previews the selected rate, and books only after explicit approval. Use when someone wants to find, compare, or book a hotel or lodging. Not for flight booking, cancellations, changes, refunds, or car rentals.",
+      "description": "Searches and books hotels conversationally through the Ramp CLI: resolves the traveler, searches paginated hotel inventory, compares the selected room-rate returned for each hotel, previews the selected rate, and books only after explicit approval. Also cancels an existing hotel booking with a preview-then-confirm flow when the cancellation capability is enabled. Use when someone wants to find, compare, or book a hotel or lodging, or wants to cancel a hotel they booked. Not for flight booking, stay changes, refund-status follow-ups, or car rentals.",
       "area": "Travel",
       "supported_surfaces": [
         "cli",
@@ -53,7 +53,7 @@
     },
     {
       "name": "ramp-card-management",
-      "description": "Inspect a user's card/fund status, then activate or lock/unlock a card from\nthe terminal. Use for card status, card lock questions, physical card\nactivation, and card lock/unlock actions.",
+      "description": "Inspect a user's actual card status, then activate or safely lock/unlock a\ncard. Use for card status, card lock questions, physical card activation, and\ncard lock/unlock actions. For cards locked by overdue tasks, use\nramp-complete-tasks to resolve the sanction before re-checking the card.",
       "area": "Cards and Spend",
       "supported_surfaces": [
         "cli",
@@ -63,13 +63,23 @@
     },
     {
       "name": "ramp-complete-expenses",
-      "description": "Find and complete missing items on your transactions — receipts, memos,\naccounting categories, funds, and attendees. Use when: 'missing receipts',\n'upload receipt', 'attach receipt', 'receipt sweep', 'add memo',\n'categorize transactions', 'missing items', 'transaction cleanup',\n'fix my transactions', 'set tracking category', 'assign to fund',\n'bulk memo update', 'receipt compliance'. Do NOT use for: approving\ntransactions (use ramp-approval-dashboard), vendor documents like W-9s or\ncontracts (use ramp-manage-vendors), or spend reporting (use ramp-spend-analysis).",
+      "description": "Find and complete requested revisions and missing items on your transactions —\nreceipts, memos, accounting categories, funds, and attendees. Use when:\n'transaction revision requested', 'fix a rejected expense', 'missing receipts',\n'upload receipt', 'attach receipt', 'receipt sweep', 'add memo',\n'categorize transactions', 'missing items', 'transaction cleanup',\n'fix my transactions', 'set tracking category', 'assign to fund',\n'bulk memo update', 'receipt compliance'. Do NOT use for: approving\ntransactions (use ramp-approval-dashboard), vendor documents like W-9s or\ncontracts (use ramp-manage-vendors), or spend reporting (use ramp-spend-analysis).",
       "area": "Cards and Spend",
       "supported_surfaces": [
         "cli",
         "mcp"
       ],
       "path": "skills/ramp-complete-expenses"
+    },
+    {
+      "name": "ramp-complete-tasks",
+      "description": "Find and complete items in the Ramp attention feed. Use when: 'what needs my\nattention', 'show my tasks', 'overdue tasks', 'complete my Ramp tasks', 'why\nis my card locked', or a card is locked until required tasks are completed.\nFor approval-only queues, use ramp-approval-dashboard.",
+      "area": "Cards and Spend",
+      "supported_surfaces": [
+        "cli",
+        "mcp"
+      ],
+      "path": "skills/ramp-complete-tasks"
     },
     {
       "name": "ramp-get-started",
@@ -83,7 +93,7 @@
     },
     {
       "name": "ramp-incorporate",
-      "description": "Resolve the COMPLETE_INCORPORATION blocker in a Ramp financing application by\nfiling a US LLC through Ramp. Use when GET /developer/v1/applications/progress\nreturns user_action: COMPLETE_INCORPORATION with provider: doola.\nAlso use after a submitted unformed-entity Ramp application reaches\nIN_REVIEW / WAIT_FOR_RAMP and the applicant explicitly asks to file the LLC.\nAlso use for: \"incorporate my business\", \"file an LLC for me\", \"set up an LLC\nthrough Ramp\", \"Ramp incorporation\", \"I don't have a legal entity yet\".\nDo NOT use for: businesses that already have an EIN (use ramp-apply-for-account PATCH\ninstead), non-US founders or country fields, companies without a US principal\nplace of business, or C-Corp formation (Phase 1 is LLC-only).",
+      "description": "Form a US LLC through Ramp when your business doesn’t have a legal entity yet. Do not use for businesses with an EIN; use ramp-apply-for-account PATCH instead. Do not use for non-US founders or businesses without a US principal place of business.",
       "area": "Getting Started",
       "supported_surfaces": [
         "cli"
@@ -132,13 +142,23 @@
     },
     {
       "name": "ramp-spend-analysis",
-      "description": "Analyze spend by vendor, category, or team over a date range. Pulls card transactions\nand bill payments, aggregates totals, and produces summary tables.\nUse when: 'how much did we spend on', 'vendor spend', 'SaaS review', 'spend report',\n'inference costs', 'total spend', 'spend by vendor', 'spend analysis',\n'pull transactions for', 'cost breakdown'.\nDo NOT use for: approving transactions (use ramp-approval-dashboard), uploading receipts\n(use ramp-complete-expenses), or verifying a single bill payment (use ramp-payment-lookup).",
+      "description": "Analyze spend by vendor, category, or team over a date range. Broad AI-spend\nquestions include both financial spend and estimated token cost.\nUse when: 'how much did we spend on', 'vendor spend', 'SaaS review', 'spend report',\n'AI spend', 'token spend', 'token usage', 'inference costs', 'total spend',\n'spend by vendor', 'spend analysis', 'pull transactions for', 'cost breakdown'.\nDo NOT use for: approving transactions (use ramp-approval-dashboard), uploading receipts\n(use ramp-complete-expenses), or verifying a single bill payment (use ramp-payment-lookup).",
       "area": "Cards and Spend",
       "supported_surfaces": [
         "cli",
         "mcp"
       ],
       "path": "skills/ramp-spend-analysis"
+    },
+    {
+      "name": "ramp-spend-optimization",
+      "description": "Find credible potential savings and account-control opportunities across Ramp spend,\nexplain the evidence and confidence, and safely configure supported fund controls after\nan exact preview and explicit approval. Use when: \"optimize my Ramp account\", \"find\nsavings\", \"clean up recurring vendor spend\", \"consolidate vendor spend\", \"duplicate\nsubscriptions\", \"oversized funds\", or \"move recurring vendor spend onto a controlled\ncard\". Do NOT use for a general spend report (use ramp-spend-analysis), expense cleanup\nor missing receipts (use ramp-complete-expenses), approvals (use ramp-approval-dashboard),\nsubscription cancellation, or vendor-site payment changes.",
+      "area": "Cards and Spend",
+      "supported_surfaces": [
+        "cli",
+        "mcp"
+      ],
+      "path": "skills/ramp-spend-optimization"
     },
     {
       "name": "ramp-submit-procurement-request",

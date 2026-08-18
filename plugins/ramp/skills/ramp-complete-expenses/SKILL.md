@@ -3,8 +3,9 @@ name: ramp-complete-expenses
 area: Cards and Spend
 supported_surfaces: [cli, mcp]
 description: |-
-  Find and complete missing items on your transactions — receipts, memos,
-  accounting categories, funds, and attendees. Use when: 'missing receipts',
+  Find and complete requested revisions and missing items on your transactions —
+  receipts, memos, accounting categories, funds, and attendees. Use when:
+  'transaction revision requested', 'fix a rejected expense', 'missing receipts',
   'upload receipt', 'attach receipt', 'receipt sweep', 'add memo',
   'categorize transactions', 'missing items', 'transaction cleanup',
   'fix my transactions', 'set tracking category', 'assign to fund',
@@ -17,13 +18,14 @@ description: |-
 
 - **Pass `--rationale` on every command** — it is a required field on these agent-tools (a non-empty string, max 1024 chars). With `--json`, supply it as a `"rationale"` key in the body. Omitting it returns `HTTP 422 (DEVELOPER_INVALID_SCHEMA)`, in both agent and human modes.
 - Scope to the user's own transactions by default (`--transactions_to_retrieve my_transactions`) unless they explicitly request broader access.
+- Only the acting cardholder can complete a transaction revision. Do not attempt
+  revision completion as an admin, manager, or copilot on the cardholder's behalf.
 - Show the transaction details before editing. Never blind-edit.
 - Never upload a receipt without confirming the match — wrong receipt on wrong transaction is worse than no receipt.
 - For bulk edits or receipt sweeps, present the plan and confirm before executing.
 - Use `ramp transactions missing {uuid}` as the reliable check for whether a receipt is attached — it returns `missing_receipt: true/false` in real time. The `receipt_uuids` field in the list response can be used as a quick filter, but it may be stale (e.g., remaining null even after a successful upload+attach).
-- Receipts must be **base64-encoded** for upload. Accepted types: PNG, JPEG, PDF, HEIC, WEBP.
-- **MCP receipt uploads have a 3 MB decoded-file cap** (3,145,728 bytes). Do not retry an oversized file with the MCP tool; have the user upload it through the Ramp web or mobile app, or forward it from their work email to `receipts@ramp.com`.
-- `receipts attach` is CLI-only. MCP callers must provide `transaction_uuid` during `upload-receipt-file` so the receipt is uploaded and attached in one call.
+- Receipt file upload is **CLI-only**. CLI uploads must be base64-encoded; accepted types are PNG, JPEG, PDF, HEIC, and WEBP.
+- MCP users must upload receipts through the Ramp web or mobile app, or forward them from their work email to `receipts@ramp.com`. Do not call `upload-receipt-file` from MCP.
 - The `--user_submitted_fields` flag tracks provenance — include it to mark which fields the user explicitly provided vs agent-inferred.
 - All CLI flags use **underscores**, not hyphens (e.g., `--from_date`, `--transaction_uuid`).
 
@@ -37,6 +39,66 @@ the call. Pass it as `--rationale "..."`, or include a `"rationale"` key in the
 these tools. The examples below all include it; keep it on every call.
 
 ## Workflow
+
+### Revision-request tasks
+
+When `GetAttentionFeed` / `ramp tasks list` returns
+`TRANSACTION_REVISION_REQUESTED`, preserve the task's transaction UUID and
+revision request context. Inspect the live transaction, show the requested
+changes, and get the cardholder's explicit confirmation before editing.
+
+1. Fix every requested agent-editable field with the applicable workflow below.
+   A successful field edit does not itself complete the revision request.
+2. Re-read the transaction and its missing items. If a requested field still
+   needs user-only work, give the user the returned Ramp link and stop; do not
+   complete the revision prematurely.
+3. Ask the cardholder for, or have them approve, a nonblank completion reason
+   summarizing how the request was resolved.
+4. Complete the revision for that same transaction.
+
+MCP:
+
+```text
+CompleteTransactionRevision(
+  transaction_uuid="{transaction_uuid}",
+  reason="Added the requested receipt and corrected the department",
+  rationale="Complete the cardholder's resolved transaction revision"
+)
+```
+
+CLI:
+
+```bash
+ramp transactions complete-revision {transaction_uuid} \
+  --reason "Added the requested receipt and corrected the department" \
+  --rationale "Complete the cardholder's resolved transaction revision" --agent
+```
+
+Treat the success response's sanction-lift status `PENDING_VERIFICATION` as an
+instruction to verify, not as evidence that a card is unlocked. Poll
+`GetAttentionFeed` / `ramp tasks list` and `ListCards` with a finite bound (at
+most three rechecks in the current run). On every attention-feed attempt, follow
+every section's cursor chain until `next_cursor` is null and require the number
+of unique hydrated task UUIDs to equal each section's `total_count`; otherwise
+the attempt is incomplete and cannot prove the revision task is absent. If a
+section's `total_count` changes between pages, restart that bounded attempt from
+the first page rather than combining two snapshots. Success requires a fully
+accounted feed in which the same revision task has disappeared
+and the exact sanctioned card reports `is_spendable: true`. If the bound is
+exhausted, report the live task, `active_locks`, and `blocking_task_count`; do
+not say the revision restored card spending.
+
+If revision completion returns:
+
+- `CompleteTransactionRevisionNotFoundError`, re-check the transaction UUID
+  from the task context.
+- `CompleteTransactionRevisionPermissionDeniedError`, stop and explain that the
+  acting cardholder must complete their own revision.
+- `CompleteTransactionRevisionFailedPreconditionError`, re-read the attention
+  feed and transaction state. This also covers a replay after the revision is
+  already complete; do not retry it as a new completion event.
+- `CompleteTransactionRevisionInternalError`, report that completion could not
+  be verified and leave the task outstanding.
 
 ### Step 1: Find transactions needing attention
 
@@ -150,7 +212,9 @@ ramp transactions edit --json '{
 
 ### Step 6: Upload receipts
 
-When the user has a receipt file and wants to attach it to a transaction:
+MCP cannot upload receipt files. Direct MCP users to the Ramp web or mobile app, or ask them to forward the receipt from their work email to `receipts@ramp.com`.
+
+For CLI callers, when the user has a receipt file and wants to attach it to a transaction:
 
 ```bash
 # Base64 encode the file (agent does this)
@@ -167,13 +231,11 @@ ramp receipts upload \
 
 The response returns `receipt_uuid` and `attached_to_transaction: true/false`.
 
-For CLI callers, omitting `--transaction_uuid` uploads the receipt without attaching it. The CLI can attach it later with:
+Omitting `--transaction_uuid` uploads the receipt without attaching it. The CLI can attach it later with:
 
 ```bash
 ramp receipts attach {receipt_uuid} {transaction_uuid} --rationale "Attach the receipt to the transaction"
 ```
-
-Delayed attachment is not available over MCP. MCP callers must include `transaction_uuid` in the upload request; otherwise the uploaded receipt cannot be attached through this MCP workflow.
 
 **Bulk upload from a directory** of receipt images/PDFs:
 
@@ -344,7 +406,7 @@ Receipt uploaded and attached (receipt_uuid: def-456).
 | `accounting category-options` paginates with integers | Unlike other endpoints, the cursor is a number, not a string |
 | `--transactions_to_retrieve` is required | Always include it on `transactions list`. Use `my_transactions` for personal, `all_transactions_across_entire_business` for admin scope |
 | Searching for specific transactions | Use `--reason_memo_merchant_or_user_name_text_search "query"` (min 3 chars) |
-| Large receipt files may hit shell arg limits | CLI: for files >100KB, write base64 to a temp file and use `--json` with the content read from file. MCP: decoded files over 3 MB are rejected; hand them off to the Ramp web/mobile app or `receipts@ramp.com`. |
-| Delayed receipt attachment | `receipts attach` is CLI-only. MCP callers must include `transaction_uuid` during upload. |
+| Large receipt files may hit shell arg limits | CLI: for files >100KB, write base64 to a temp file and use `--json` with the content read from file. |
+| Receipt uploads from MCP | Receipt file upload is unavailable. Direct users to the Ramp web/mobile app or `receipts@ramp.com`. |
 | Duplicate upload risk | Re-check `ramp transactions missing {uuid}` immediately before uploading; skip when `missing_receipt` is `false`. `receipt_uuids` alone can be stale. |
 | Comment on a transaction | `ramp general comment {uuid} --ramp_object_type transaction --message "text" --rationale "Add a comment for the user"` |
