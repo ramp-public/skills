@@ -33,4 +33,4 @@ The following paths are synchronized and should not be edited directly:
 
 Plugin manifests, rules, commands, assets, and repository documentation are maintained in this repository. Ramp's publishing pipeline owns mirror paths, catalog generation, and validation so generated surfaces cannot drift.
 
-The public repository must set the `SYNC_BOT_ACTOR` repository variable to the GitHub actor used by Ramp's publisher. All other pull requests are prevented from editing generated paths.
+The publishing workflow recognizes the Ramp Skills publishing bot directly. All other pull requests are prevented from editing generated paths.
