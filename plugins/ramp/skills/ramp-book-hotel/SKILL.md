@@ -2,14 +2,14 @@
 name: ramp-book-hotel
 area: Travel
 supported_surfaces: [cli, mcp]
-description: "Searches and books hotels conversationally through the Ramp CLI: resolves the traveler, searches paginated hotel inventory, compares the selected room-rate returned for each hotel, previews the selected rate, and books only after explicit approval. Use when someone wants to find, compare, or book a hotel or lodging. Not for flight booking, cancellations, changes, refunds, or car rentals."
+description: "Searches and books hotels conversationally through the Ramp CLI: resolves the traveler, searches paginated hotel inventory, compares the selected room-rate returned for each hotel, previews the selected rate, and books only after explicit approval. Also cancels an existing hotel booking with a preview-then-confirm flow when the cancellation capability is enabled. Use when someone wants to find, compare, or book a hotel or lodging, or wants to cancel a hotel they booked. Not for flight booking, stay changes, refund-status follow-ups, or car rentals."
 ---
 
 # Book a Hotel
 
 The user describes a stay in plain words. Turn that into `ramp travel` commands, run them, and
 show clean results. Never show or ask the user to type a CLI command; talk like a travel helper
-(`Searching hotels near the Chicago office, Aug 10-13...`), not about tools or flags.
+(`Searching hotels near Lower Manhattan, Aug 10-13...`), not about tools or flags.
 
 The steps, phases, checklists, field names, and command names in this guide are your internal
 scaffolding; never surface them to the user. Reason through them silently. Never mention this
@@ -33,7 +33,7 @@ Give only concise, user-relevant action and result updates.
   selects a room/rate → `book-hotel` preview → explicit approval → `book-hotel --confirm`.
 - A hotel booking spends real money. Always preview first and wait for explicit confirmation.
 - Never reuse an amount from search as `expected_total_amount`; only use the fresh preview's
-  exact `total_amount`.
+  exact numeric `expected_total_amount`.
 - A selected fund is part of the approved preview state. Never add or change
   `--spend_allocation_id` only at confirmation: preview again with the exact selected `fund_uuid`,
   present any changed total/policy/approval result, get explicit approval, then confirm with that
@@ -52,7 +52,7 @@ For self-booking, omit `traveler_user_id`. Before searching, check the traveler'
 
 ```bash
 ramp travel profile --output json \
-  --rationale "check the traveler profile for the Chicago hotel stay, Aug 10-13"
+  --rationale "check the traveler profile for the Lower Manhattan hotel stay, Aug 10-13"
 ```
 
 If `has_profile` is false, collect the required identity and contact details together and call
@@ -63,7 +63,7 @@ Only book for another person when the requester explicitly asks. Resolve that pe
 
 ```bash
 ramp users list --name_search "Taylor Smith" --page_size 5 --output json \
-  --rationale "resolve the traveler for the Chicago hotel stay, Aug 10-13"
+  --rationale "resolve the traveler for the Lower Manhattan hotel stay, Aug 10-13"
 ```
 
 If multiple people match, ask the requester to choose. Pass the selected user UUID to `travel
@@ -74,29 +74,59 @@ the traveler there. Never silently switch to the requester when lookup or author
 ## Gather the stay
 
 Required details are destination, check-in date, and check-out date. Use the traveler's words for
-a city, neighborhood, address, landmark, or office location. Resolve relative dates to
+a city, neighborhood, address, or landmark. Resolve relative dates to
 `YYYY-MM-DD` and repeat the dates back so mistakes surface before searching. Default to one adult;
 only set another count when the traveler asks.
 
 Ask for all genuinely missing required details in one message. Do not ask for preferences such as
 hotel chain, amenities, or refundability unless the traveler made them important.
 
+### Office and headquarters destinations
+
+When the destination references a company office, HQ, or headquarters in any form, resolve the
+office with `ramp travel offices` before searching. Never pass an unresolved office phrase to
+hotel search: it rejects an office-keyword `location_query` that arrives without resolved
+coordinates.
+
+```bash
+ramp travel offices --output json \
+  --rationale "resolve the company office anchor for the hotel stay, Aug 10-13"
+```
+
+Each `office_locations[]` entry carries `display_name`, `latitude`, and `longitude` but no street
+address; the nullable `company_address` is the primary registered address only, with no
+coordinates — additional offices have no street address, and a business may hide the registered
+address entirely. Match the requested city or office name against both shapes. Once one
+coordinate-bearing `office_locations` entry is chosen, pass its `display_name` as
+`--location_query` together with its exact `--latitude` and `--longitude` on the fresh
+`search-hotel`. `display_name` is nullable: when the chosen office has none, keep the traveler's
+own office phrase as `--location_query` while still passing the exact coordinates. Refer to
+offices by display name — or by the traveler's phrase when the office is unnamed — and never show
+raw coordinates to the traveler. If
+more than one office could match, ask the traveler to choose. If only `company_address` matches
+and no coordinate-bearing office entry is available, ask the traveler for a specific neighborhood,
+landmark, or address instead. When the traveler gives only a bare city and the company has an
+office there, offer the office as an anchor option instead of silently adopting it.
+
 ## Search hotels
 
 ```bash
 ramp travel search-hotel --output json \
-  --location_query "Chicago office" \
+  --location_query "Lower Manhattan" --wait_for_results=true \
   --check_in_date 2026-08-10 --check_out_date 2026-08-13 \
-  --rationale "search hotels for the Chicago stay, Aug 10-13"
+  --rationale "search hotels for the Lower Manhattan stay, Aug 10-13"
 ```
 
-Use `--location_query` for the destination context (city, neighborhood, office, landmark, or
-address). When the traveler asks for a specific property, also pass its exact name with
+Pass `wait_for_results=true` explicitly on **every fresh** hotel search. This keeps the CLI/MCP
+flow synchronous regardless of the business's travel-tool configuration. `hotel_name` searches
+are synchronous as well. Use `--location_query` for the destination context (city, neighborhood,
+landmark, or address). When the traveler asks for a specific property, also pass its exact name with
 `--hotel_name` while preserving the destination context.
 
 ```bash
 ramp travel search-hotel --output json \
   --location_query "Lower Manhattan" --hotel_name "citizenM New York Bowery" \
+  --wait_for_results=true \
   --check_in_date 2026-08-10 --check_out_date 2026-08-13 \
   --rationale "search for citizenM New York Bowery for the Manhattan stay, Aug 10-13"
 ```
@@ -112,26 +142,39 @@ keys are `DISTANCE`, `LOWEST_PRICE`, `TIME`, `WEIGHTED`, `MOST_POPULAR`, and `ST
 known literal values. Preserve destination, dates, traveler, adult count, limit, hotel name, and
 rationale in the JSON body when applicable; omit adult count and limit when their defaults match.
 
-`next_cursor` is opaque. If the traveler wants more results, call search with that value unchanged
-as `--cursor` and a rationale; omit the original search fields because Ramp reads
-the cached result. Preserve a non-default `--limit` when consistent page size matters. Append the
-new hotels; never inspect, edit, synthesize, or reuse a cursor with a different search.
+A completed synchronous search returns recommendations, not a plain list: `recommended` holds
+`best_match` plus `alternates` in ranked order — up to ten hotels total on this surface, capped by
+`--limit` when it is smaller — and `hotels` is empty. Each recommendation is `{hotel, reasons,
+tradeoffs}`; read the hotel metadata from its `hotel` object. The rest of the ranked inventory
+stays cached behind `next_cursor`, and `total_count` still counts the full inventory. Present
+every returned recommendation in text; never call `hotel-rates` just to render options for hotels
+the traveler has not selected. The response's `assistant_note` is a presentation reminder
+addressed to you — follow it and never show it to the traveler.
+
+`next_cursor` is opaque. If the traveler wants hotels beyond the recommendations, call search with
+that value unchanged as `--cursor` and a rationale; omit the original search fields because Ramp
+reads the cached result. Preserve a non-default `--limit` when consistent page size matters.
+Append the new hotels; never re-run the search for more results and never inspect, edit,
+synthesize, or reuse a cursor with a different search.
 
 Use `total_count` and the number displayed so the traveler knows when more results are available.
 
-An empty `hotels` list means no matching inventory. Offer to adjust the location or dates. Surface
-`policy_summary` before the table when present; it is Ramp's authoritative summary of what this
-traveler may book.
+No matching inventory means `recommended` is absent and `hotels` is empty. Offer to adjust the
+location or dates. Surface `policy_summary` before the table when present; it is Ramp's
+authoritative summary of what this traveler may book.
 
 ## Present the hotel comparison
 
-Search follows the Ramp web flow and returns zero or one selected/best room-rate for each hotel
-inside `rates`. It does **not** return every available room or rate. Render exactly one initial
-comparison table. The full column order is:
+When `applied_preferences_summary` is present, lead with it once as a short sentence so the
+traveler knows how preferences shaped the ranking. Then render the recommended hotels as the one
+initial comparison table: `recommended.best_match` first, then each `alternates` entry in returned
+order. Search follows the Ramp web flow and returns zero or one selected/best room-rate for each
+hotel inside its `hotel.rates`. It does **not** return every available room or rate. The full
+column order is:
 
 | # | Hotel | Rating | Chain | Nightly (pre-tax) | All-in total | Policy | Loyalty program | Notes |
 |---|-------|--------|-------|---------------------|--------------|--------|-----------------|-------|
-| 1 | Four Seasons Chicago | 5-star | Four Seasons | $245 USD | $812 USD | In policy | Four Seasons Preferred Partner | 12 min walk; Company preferred |
+| 1 | Four Seasons Chicago | 5-star | Four Seasons | $245 USD | $812 USD | In policy | Four Seasons Preferred Partner | Matches gym preference; 12 min walk; Company preferred |
 
 Populate it only from returned metadata:
 
@@ -153,17 +196,25 @@ Populate it only from returned metadata:
   or reverse-engineer it from displayed prices. Use `policy_summary` for broader policy context.
 - **Loyalty program:** show `loyalty_program` when present; otherwise show `-`. Do not replace a
   missing program with generic eligibility or points-earning prose.
-- **Notes:** combine `office_travel_time_minutes` with `office_travel_mode` (for example,
+- **Notes:** start with the recommendation's `reasons`, condensed to a few words each, and any
+  material `tradeoffs` (a policy caveat or missed preference the traveler should weigh); then
+  combine `office_travel_time_minutes` with `office_travel_mode` (for example,
   `12 min walk`), `coworker_booking_count` when nonzero, and `Company preferred` when
-  `is_company_preferred=true`, separated by `; `. Show `-` when none is present. Do not call travel
-  time a distance. Use hotel `address` to disambiguate similar properties; mention relevant
-  `hotel_amenities` only when they match a stated preference.
+  `is_company_preferred=true`, separated by `; `. If the combined cell gets long, move the
+  reasons/tradeoffs to a compact one-line note under the row instead. Show `-` when none is
+  present. Do not invent reasons beyond the returned ones and do not call travel time a distance.
+  Use hotel `address` to disambiguate similar properties; mention relevant `hotel_amenities` only
+  when they match a stated preference.
 - If `rates=[]`, show `-` for price, policy, and loyalty cells and note `No current summary rate`.
   Never index the first rate unless it exists; the traveler can still select the hotel and fetch
   complete rates.
 - Keep a private display-number-to-hotel-`id` map. Never print hotel IDs unless asked.
 - Do not show a second room/rate table during this initial comparison. Do not show `room_name`,
   `refundability`, or `cancellation_policy` yet; reserve them for the selected-hotel details.
+
+When the response includes `web_search_url`, end the results message with one final markdown link
+labeled `See all results` pointing at the exact returned URL. Never rewrite, re-encode, shorten,
+or substitute any part of it, and never use another label.
 
 Wait for the traveler to select a hotel option. If their choice is ambiguous, confirm the hotel,
 nightly amount, and all-in total. Do not preview or book the search result's summary rate.
@@ -182,14 +233,25 @@ ramp travel hotel-rates "<selected_hotel_id>" --output json \
 For delegated booking, pass the same `--traveler_user_id`. Keep `--num_adults` consistent with
 search.
 
-Render one row for every returned `all_rates[].rates[]` option:
+The response returns `recommended_rates` — up to three room-rate groups with full rate payloads —
+alongside the complete `all_rates` inventory. Lead with these recommended options: name each
+group's room and rate and quote its `recommendation_reason` when populated. Reasons are generated
+fail-open and may be null; a missing reason is not a signal, so present the rate without inventing
+one. `recommendation_reason` appears only on rates inside `recommended_rates` (including each
+group's `best_rate`) and is always null on `all_rates` rows. A nonempty `unmet_preferences` on a
+recommended group marks a best-available fallback; tell the traveler which requested preferences
+it does not meet. When every rate is out of policy, `recommended_rates` still holds the fallback
+picks with their policy-violation reasons.
+
+Then keep the full inventory visible: render one row for every returned `all_rates[].rates[]`
+option:
 
 | # | Room | Nightly (pre-tax) | All-in nightly | All-in total | Payment | Refundability | Cancellation | Policy | Loyalty | Notes |
 |---|------|---------------------|----------------|--------------|---------|---------------|--------------|--------|---------|-------|
 | 1 | Deluxe King | $245 USD | $271 USD | $812 USD | Pay later | Refundable | Free until Aug 8 | In policy | Four Seasons | Recommended; Company preferred |
 
 - Use the room group's `room_name`, `room_description`, and `room_amenities`. Mark a group as
-  recommended only when it also appears in `display_ui_recommended_cards`; do not infer
+  recommended only when it also appears in `recommended_rates`; do not infer
   recommendations from list order or `best_rate`. `best_rate` is the lowest-total option within
   that room group, not a global recommendation.
 - Show each rate's `nightly_amount`, `all_in_nightly_amount`, `total_amount`, `payment_type`,
@@ -230,7 +292,11 @@ choose another.
 The preview is authoritative and may differ from the rates response. Present:
 
 - hotel, room, and stay dates
-- `nightly_rate` and exact all-in `total_amount`
+- traveler (`traveler_name_display` when the preview card provides it)
+- the selected rate's `nightly_amount` as the pre-tax nightly price; do not substitute an
+  all-in nightly amount
+- payment timing from the selected rate's `payment_type` (or preview card `payment_display`)
+- exact all-in `total_amount` from the preview; do not derive it from a nightly amount
 - `in_policy` and every `policy_violations` entry
 - `requires_approval` and each `approval_steps` entry
 - every `eligible_funds` option: `fund_name` and available balance/spending limit when present;
@@ -257,15 +323,29 @@ proof of enrollment.
 If the preview is out of policy, show every returned violation and ask why the traveler needs that
 rate. Keep their exact justification as `oop_reason`; Ramp requires `--oop_reason` on confirmation
 for an out-of-policy quote and approvers see it. `reason` is a separate optional general booking
-note; include `--reason` only when the traveler volunteered one.
+note unless `request_new_fund=true`, where it is the required trip purpose; include it only under
+those conditions.
 
-If the traveler explicitly selected a known fund before preview, pass its UUID as
-`--spend_allocation_id`. Otherwise preview without a fund, present every eligible choice, and ask
-whether to use one or request a new allocation. If they choose a returned fund, repeat the preview
-with its literal `fund_uuid` as `--spend_allocation_id`, present any changed approval result, and
-get explicit approval of that final preview. Confirm with the same fund. Omitting the flag on
-confirm requests a new allocation. Approval requirements come from `requires_approval` and
-`approval_steps` and can differ depending on fund selection.
+If no fund was explicitly selected, the preview auto-uses `recommended_fund_uuid` when an eligible
+fund is available. Label `<fund name> (recommended)` only when the tool auto-populated that
+recommendation; a user-selected fund never gets the label, even when its UUID matches. If the
+preview echoes an explicitly passed fund as `selected_fund_uuid`; when non-null, that is the
+booking fund. If the traveler chooses or changes to a fund, repeat the preview with `confirm=false` and its literal
+`fund_uuid` as `spend_allocation_id`, present the refreshed result, and wait for a separate
+explicit confirmation turn.
+
+Distinguish `fund_eligibility_status=none_eligible` from `lookup_failed`: the former permits the
+new-fund path. When using that path, collect the trip purpose before confirmation because it is
+required as `reason` and shown to approvers. The latter requires a fresh preview and must never be confirmed. Use
+`approval_display_status` verbatim; do not infer approval wording from `requires_approval` or
+`approval_steps` alone.
+
+If `loyalty_program_names_to_offer` is non-empty and this is a self-booking, offer to save one of
+the returned programs. The hotel flow may ask that loyalty question together with the usual
+confirmation question. Save only the exact returned program name with the membership number the
+traveler provides. For a delegated booking, do not offer or attempt to save loyalty; the save action
+targets the requester, not the selected traveler. If the traveler saves a program, run a fresh
+preview and require fresh confirmation.
 
 If the traveler selected an existing trip, keep its literal UUID in context but do not send
 `--trip_id` during preview: Ramp only resolves it during confirm. A missing, invalid, or other-user
@@ -279,39 +359,44 @@ behavior, and OOP justification when applicable. Stop and wait for a clear yes.
 ## Confirm only after explicit approval
 
 Use the same hotel ID, rate ID, dates, traveler, and fund selection from the approved final preview.
-Add `--confirm` and the preview's exact `total_amount`:
+Add `--confirm` and copy the preview's numeric `expected_total_amount` verbatim, with no currency
+symbol:
 
 ```bash
 ramp travel book-hotel "<selected_hotel_id>" "<selected_rate_id>" --confirm \
   --check_in_date 2026-08-10 --check_out_date 2026-08-13 \
-  --expected_total_amount '<preview_total_amount>' --output json \
-  --rationale "book the selected Chicago hotel rate; traveler approved the preview"
+  --expected_total_amount <preview_expected_total_amount> --output json \
+  --rationale "book the selected Lower Manhattan hotel rate; traveler approved the preview"
 ```
 
 Add optional confirmation flags only when applicable:
 
 - `--traveler_user_id '<traveler_uuid>'`: exact delegated traveler UUID used for fresh search,
   rates, and preview.
-- `--spend_allocation_id '<fund_uuid>'`: exact private UUID for the fund selected from the final
-  preview; omit to request a new allocation.
+- `--spend_allocation_id '<fund_uuid>'`: exact fund from the final preview, including the
+  recommended UUID when the preview auto-populated it.
+- `--request_new_fund=true` plus `--reason '<trip purpose>'`: use only when the latest preview
+  showed the new-fund path. The trip purpose is shown to approvers.
 - `--trip_id '<trip_uuid>'`: exact existing trip UUID explicitly selected by the traveler; omit to
   let Ramp auto-select or create a trip. This is the step where Ramp resolves it.
 - `--oop_reason '<traveler_justification>'`: exact justification collected after an out-of-policy
   preview; required only when `in_policy=false`.
-- `--reason '<booking_note>'`: separate optional general note, only when volunteered by the
-  traveler. Never repurpose it as the OOP justification.
+- `--reason '<trip purpose>'`: required with `request_new_fund=true`; never repurpose it as the
+  OOP justification.
 
 Keep any collected OOP justification in context through a fund or price re-preview, but send it
 only on confirmation. If the new preview changes policy violations materially, reconfirm that the
 traveler's justification still applies.
 
-Single-quote currency strings containing `$` so the shell does not expand them. Never normalize,
-reformat, or recalculate `expected_total_amount`.
+Confirmation requires exactly one funding path: `spend_allocation_id` or
+`request_new_fund=true`. Never omit both and never pass both. Never normalize, reformat, or
+recalculate the numeric `expected_total_amount`.
 
-If confirmation reports a changed total, do not book at the new price. Run a new preview, present
-the new nightly/all-in amounts and any changed policy terms, then get explicit approval again. For
-missing/expired cache mappings, start a fresh search; for hotel/date mismatches, fetch fresh rates
-for the selected hotel/current dates. Treat feature-disabled errors separately from no results.
+If `confirm=true` fails for **any** reason, stop. Relay the error `message`, follow
+`agent_guidance`, and never retry, tweak parameters, switch hotel/room/rate, or confirm again
+without a fresh preview and a fresh explicit confirmation. A changed total, missing/expired cache
+mapping, or hotel/date mismatch therefore requires the appropriate fresh preview/rates/search and
+new approval; it is not permission to retry the confirmation.
 
 On a successful confirmation, present `booking.booking_request_id`, lowercase `booking.status`,
 `booking.total_amount`, and `booking.next_steps` before verification. Do not call the reservation
@@ -324,13 +409,18 @@ hotel is confirmed. Show the returned booking status and approval state accurate
 
 ```bash
 ramp travel bookings --output json \
-  --rationale "verify the Chicago hotel booking request, Aug 10-13"
+  --rationale "verify the Lower Manhattan hotel booking request, Aug 10-13"
 ```
 
-For delegated booking, pass the same traveler UUID. The default call includes current/upcoming
-hotels, flights, and cars; inspect the hotel results and match using `hotel_name`, dates,
-`room_type`, and the most recent `booked_at`. Use returned `trip_id` and `trip_name` to verify trip
-attachment when needed.
+For delegated booking, pass the same traveler UUID. Retain the exact `booking.booking_request_id`
+from confirmation and match it to the same `booking_request_id` in the bookings response. The
+default call includes current/upcoming hotels, flights, and cars. Each entry has a generic `id`;
+use the matching entry's exact `id` with `travel booking-details` for detailed questions. Do not
+fuzzy-match by hotel name, dates, room type, or booking time. Use returned `trip_id` and `trip_name`
+to verify trip attachment when needed. If the matching request is missing from the default result,
+retry once with `--include_failed`; if it is still missing, report that verification could not
+locate the submitted request rather than using another entry. Cancelled, rejected, and failed
+requests do not block rebooking.
 
 The submit response's nested `booking.status` is lowercase (`pending_approval`, `approved`,
 `booked`, or `rejected`). The bookings response uses uppercase request/reservation states:
@@ -338,12 +428,113 @@ The submit response's nested `booking.status` is lowercase (`pending_approval`, 
 - `CONFIRMED`: report the reservation as confirmed.
 - `PENDING_APPROVAL`: report that the request is awaiting approval, not booked.
 - `PROCESSING`: report that fulfillment is still processing and check again later.
-- `FAILED`: show `error_message` and address the stated issue before retrying.
+- `FAILED`: show `error_message`; address the stated issue before a new booking attempt.
 - `CANCELLED`: report that the request/reservation was cancelled.
 - `REJECTED`: report that the request was rejected.
 
-Default bookings lookup excludes unsuccessful `FAILED`, `CANCELLED`, and `REJECTED` requests. Only
-repeat it with `--include_failed` when diagnosing an explicitly unsuccessful attempt; do not use
-that flag for normal post-confirm verification.
+`travel booking-details` is flag-gated by `OMNI_TRAVEL_BOOKING_SUPPORT_SKILL_ENABLED`. If it is not
+available, degrade gracefully to the information from `travel bookings`. When available, use
+`request_status`, `current_total_amount`, `error_message`, and `approval.pending_approval_summary`;
+relay the pending approval summary verbatim.
 
-For cancellations, changes, or refunds, hand off to the Ramp web app; do not submit another booking.
+## Cancelling a hotel booking
+
+Cancelling forfeits or spends real money, so it follows the same preview → explicit yes →
+confirm discipline as booking. The command is `ramp travel cancel-hotel`; it is enabled per
+business, so it may be absent for some accounts (see "If cancellation is unavailable"). It
+always cancels the entire hotel booking.
+
+### Identify the exact booking first
+
+Never guess which booking to cancel. Resolve it from `ramp travel bookings --output json`
+(same `--traveler_user_id` for delegated travelers) and use the exact entry `id` — the same
+exact ID this skill already uses with `travel booking-details`. If more than one booking could
+match ("cancel my New York hotel"), show the likely matches and ask which one; never pick by
+hotel name, dates, or recency on your own. If the traveler pasted an ID that this
+conversation's `travel bookings` never returned, look the booking up first instead of trusting
+the pasted value.
+
+Cancellation applies to a fulfilled booking. For an unfulfilled request (e.g.
+`PENDING_APPROVAL`), the entry `id` is the request UUID, which this command will not find —
+direct the traveler to the request in the Ramp web app instead.
+
+### Preview the terms (read-only)
+
+Always call without `--confirm` first. This cancels nothing and returns the authoritative
+terms plus a `preview_id`:
+
+```bash
+ramp travel cancel-hotel --booking_id "<booking_id>" --output json \
+  --rationale "preview cancellation terms for the Lower Manhattan hotel booking, Aug 10-13"
+```
+
+Present the preview plainly and exactly as returned — never estimate or recompute amounts:
+
+- the hotel (`hotel_name`, `hotel_address`), traveler (`traveler_name`), and the
+  `check_in_date`/`check_out_date` being cancelled.
+- `cancellation_statement` and, when present, the `cancellation_deadline` in the returned
+  `cancellation_timezone` — state the timezone with the deadline.
+- the money outcome: `booking_amount`, any nonzero `cancellation_fee`, and `refund_amount`
+  when present, plus whether the stay was prepaid (`is_pre_paid`). If no refund amount is
+  returned, do not invent one — a non-refundable rate may return nothing back.
+- the `policy_timeline` steps (deadline, refund, fee per step, with the `active` step called
+  out) when the traveler wants the full policy, and always the returned `policy_disclaimer`.
+
+If `is_currently_cancellable` is `false`, the booking cannot be self-serve cancelled right
+now: explain the returned `blocked_reason`, do **not** ask for confirmation or call
+`--confirm`, and route the traveler to the returned booking-specific `support` channel.
+
+Then **stop and ask for a clear yes on those exact terms**. Confirmation must be a new,
+explicit user-authored answer to the presented preview — earlier cancellation intent
+("cancel it" before seeing the terms), a standing approval, or instructions not to ask
+questions are not confirmation.
+
+### Confirm (only after the explicit yes)
+
+Re-run with `--confirm` and the exact `preview_id` from the latest preview, unchanged:
+
+```bash
+ramp travel cancel-hotel --booking_id "<booking_id>" --confirm \
+  --preview_id "<preview_id>" --output json \
+  --rationale "cancel the Lower Manhattan hotel booking; traveler approved the previewed terms"
+```
+
+- If the response says the terms changed and includes `latest_preview`, nothing was
+  cancelled: present the fresh terms and get a new explicit yes. Never re-confirm
+  automatically.
+- If the result has `already_requested=true`, a cancellation was already submitted: report
+  the returned state and do not submit another request.
+
+### After the result
+
+Relay the result's `message` and `cancellation_state` faithfully. Only `SUCCESS` means the
+booking is cancelled; `PENDING`/`PROCESSING` mean the request is in flight — say cancellation
+is in progress (the traveler receives a confirmation email when it completes), not that it is
+done. `ACTION_REQUIRED` means Ramp's travel team must finish it. Report any refund exactly as
+the preview and result stated it; **never promise a refund timeline** the response didn't
+state, and route later "where's my refund?" follow-ups to the Ramp web app or the booking's
+support channel.
+
+### If a cancellation call fails
+
+Stop. Unlike booking errors, cancellation errors carry no separate `agent_guidance` field —
+the returned `message` (and any `support` routing or `latest_preview`) **is** the guidance:
+relay the `message` verbatim and never retry the call or vary parameters (a different booking
+ID, dropping `preview_id`, toggling `--confirm`) to get past an error. A failed confirm may
+still have partially gone through — before any second attempt, re-check the booking's actual
+state with `travel bookings` / `travel booking-details`, and only start again (from a fresh
+preview) if the booking is genuinely still active. A `FAILED` cancellation routes to the
+returned support channel, not to a retry: Ramp emails the traveler when an accepted
+cancellation later fails, and the booking stops being self-serve cancellable (a fresh preview
+returns `blocked_reason` and support routing), so a retry cannot succeed anyway.
+
+### If cancellation is unavailable
+
+`travel cancel-hotel` is enabled per business. If the command is missing or Ramp reports the
+capability is unavailable, do not say the booking can't be cancelled — say self-serve
+cancellation isn't enabled here and direct the traveler to the booking in the Ramp web app or
+the booking's support channel.
+
+Stay changes — different dates, a different room, adding nights, or cancel-and-rebook — are
+**not** cancellations and stay outside this skill; send the traveler to the Ramp web app or
+the booking's support channel for those.

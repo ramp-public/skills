@@ -3,11 +3,11 @@ name: ramp-spend-analysis
 area: Cards and Spend
 supported_surfaces: [cli, mcp]
 description: |-
-  Analyze spend by vendor, category, or team over a date range. Pulls card transactions
-  and bill payments, aggregates totals, and produces summary tables.
+  Analyze spend by vendor, category, or team over a date range. Broad AI-spend
+  questions include both financial spend and estimated token cost.
   Use when: 'how much did we spend on', 'vendor spend', 'SaaS review', 'spend report',
-  'inference costs', 'total spend', 'spend by vendor', 'spend analysis',
-  'pull transactions for', 'cost breakdown'.
+  'AI spend', 'token spend', 'token usage', 'inference costs', 'total spend',
+  'spend by vendor', 'spend analysis', 'pull transactions for', 'cost breakdown'.
   Do NOT use for: approving transactions (use ramp-approval-dashboard), uploading receipts
   (use ramp-complete-expenses), or verifying a single bill payment (use ramp-payment-lookup).
 ---
@@ -16,12 +16,17 @@ description: |-
 
 - **Pass `--rationale` on every command** — it is a required field on these agent-tools (a non-empty string, max 1024 chars). With `--json`, supply it as a `"rationale"` key in the body. Omitting it returns `HTTP 422 (DEVELOPER_INVALID_SCHEMA)`, in both agent and human modes.
 - Always query both **transactions** and **bills** when investigating complete vendor spend. Card charges and bill payments are separate resources — there is no unified spend endpoint.
+- For a broad **AI, LLM, or inference spend** question, query token cost in addition to transactions and bills. Report these measures separately and never add them because they can overlap. If the user explicitly asks for card/Bill Pay or token data, query only that data source.
 - Never treat a search result's bill `amount` as paid-in-period spend. It is the full invoice amount, and a payment-date match may represent only one partial payment. A complete paid total requires payment-allocation amounts and dates from another source.
 - Pass `--agent` for machine-readable JSON output on all commands.
 - Handle amount format differences: transactions use strings (`"$1,048.25"`, `"-$259.49"`), bills use numbers (`15000`), PO amounts use numbers. Reimbursement amounts are in dollars.
 - Paginate until `next_page_cursor` is null — a single page may not return everything.
 - Flag vendor name variants explicitly (e.g., "Delta Air Lines" vs "Delta Airlines") — the API does not normalize.
 - Negative transaction amounts are refunds. Include them in totals but call them out.
+
+## AI Token Cost
+
+Run `ramp ai-spend` to see the available token-spend commands, then use the command that matches the requested scope.
 
 ## Workflow
 

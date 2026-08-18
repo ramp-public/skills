@@ -2,17 +2,7 @@
 name: ramp-incorporate
 area: Getting Started
 supported_surfaces: [cli]
-description: |-
-  Resolve the COMPLETE_INCORPORATION blocker in a Ramp financing application by
-  filing a US LLC through Ramp. Use when GET /developer/v1/applications/progress
-  returns user_action: COMPLETE_INCORPORATION with provider: doola.
-  Also use after a submitted unformed-entity Ramp application reaches
-  IN_REVIEW / WAIT_FOR_RAMP and the applicant explicitly asks to file the LLC.
-  Also use for: "incorporate my business", "file an LLC for me", "set up an LLC
-  through Ramp", "Ramp incorporation", "I don't have a legal entity yet".
-  Do NOT use for: businesses that already have an EIN (use ramp-apply-for-account PATCH
-  instead), non-US founders or country fields, companies without a US principal
-  place of business, or C-Corp formation (Phase 1 is LLC-only).
+description: Form a US LLC through Ramp when your business doesn’t have a legal entity yet. Do not use for businesses with an EIN; use ramp-apply-for-account PATCH instead. Do not use for non-US founders or businesses without a US principal place of business.
 ---
 
 # Incorporate With Ramp

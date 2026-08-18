@@ -26,11 +26,13 @@
     },
     {
       "title": "Cards and Spend",
-      "description": "Manage cards, transactions, receipts, and spend analysis.",
+      "description": "Manage cards, attention-feed tasks, transactions, receipts, and spend analysis.",
       "skills": [
         "ramp-card-management",
         "ramp-complete-expenses",
-        "ramp-spend-analysis"
+        "ramp-complete-tasks",
+        "ramp-spend-analysis",
+        "ramp-spend-optimization"
       ]
     },
     {

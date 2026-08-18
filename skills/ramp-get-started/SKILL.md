@@ -44,7 +44,7 @@ If **no** (new customer):
 
 ## What you can do next
 
-Once I'm set up, fetch the playbook directory at https://agents.ramp.com/.well-known/agent-skills/index.json for the full menu of things you can do for me.
+Once I'm set up, fetch the playbook directory at https://agents.ramp.com/.well-known/agent-skills/index.json for the full menu of things you can do for me. When I ask what needs my attention, mention overdue tasks, or say a card is locked until I complete tasks, fetch and follow `ramp-complete-tasks`.
 ```
 
 ## ChatGPT
@@ -71,7 +71,7 @@ If **no** (new customer):
 
 ## What you can do next
 
-Once I'm set up, fetch the playbook directory at https://agents.ramp.com/.well-known/agent-skills/index.json for the full menu of things you can do for me.
+Once I'm set up, fetch the playbook directory at https://agents.ramp.com/.well-known/agent-skills/index.json for the full menu of things you can do for me. When I ask what needs my attention, mention overdue tasks, or say a card is locked until I complete tasks, fetch and follow `ramp-complete-tasks`.
 ```
 
 ## Claude Code
@@ -103,7 +103,7 @@ If **no** (new customer):
 
 ## What you can do next
 
-Once I'm set up, fetch the playbook directory at https://agents.ramp.com/.well-known/agent-skills/index.json for the full menu of things you can do for me.
+Once I'm set up, fetch the playbook directory at https://agents.ramp.com/.well-known/agent-skills/index.json for the full menu of things you can do for me. When I ask what needs my attention, mention overdue tasks, or say a card is locked until I complete tasks, fetch and follow `ramp-complete-tasks`.
 ```
 
 ## Codex
@@ -135,7 +135,7 @@ If **no** (new customer):
 
 ## What you can do next
 
-Once I'm set up, fetch the playbook directory at https://agents.ramp.com/.well-known/agent-skills/index.json for the full menu of things you can do for me.
+Once I'm set up, fetch the playbook directory at https://agents.ramp.com/.well-known/agent-skills/index.json for the full menu of things you can do for me. When I ask what needs my attention, mention overdue tasks, or say a card is locked until I complete tasks, fetch and follow `ramp-complete-tasks`.
 ```
 
 ## Perplexity
@@ -162,5 +162,5 @@ If **no** (new customer):
 
 ## What you can do next
 
-Once I'm set up, fetch the playbook directory at https://agents.ramp.com/.well-known/agent-skills/index.json for the full menu of things you can do for me.
+Once I'm set up, fetch the playbook directory at https://agents.ramp.com/.well-known/agent-skills/index.json for the full menu of things you can do for me. When I ask what needs my attention, mention overdue tasks, or say a card is locked until I complete tasks, fetch and follow `ramp-complete-tasks`.
 ```
