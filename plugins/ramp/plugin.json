@@ -1,8 +1,8 @@
 {
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "ramp",
   "version": "0.3.0",
-  "description": "Connect Claude to Ramp for spend analysis, approvals, transaction cleanup, and vendor workflows.",
-  "displayName": "Ramp",
+  "description": "Connect AI agents to Ramp for spend analysis, approvals, transaction cleanup, and vendor workflows.",
   "author": {
     "name": "Ramp",
     "email": "developer-support@ramp.com",
@@ -12,7 +12,6 @@
   "repository": "https://github.com/ramp-public/skills",
   "license": "MIT",
   "keywords": ["ramp", "mcp", "finance", "spend", "expenses", "approvals", "vendors"],
-  "skills": ["./skills/"],
-  "commands": ["./commands/"],
+  "skills": "./skills/",
   "mcpServers": "./mcp.json"
 }

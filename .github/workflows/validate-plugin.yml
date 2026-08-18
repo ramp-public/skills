@@ -1,0 +1,82 @@
+name: Validate Agent Plugins
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'plugins/**'
+  push:
+    branches: [main]
+    paths:
+      - 'plugins/**'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ajv-cli
+        run: npm install -g ajv-cli ajv-formats
+
+      - name: Fetch Agent Plugins schemas
+        run: |
+          mkdir -p /tmp/schemas
+          curl -fsSL https://agent-plugins.org/schemas/1.0.0/plugin.schema.json \
+            -o /tmp/schemas/plugin.schema.json
+          curl -fsSL https://agent-plugins.org/schemas/1.0.0/mcp.schema.json \
+            -o /tmp/schemas/mcp.schema.json
+
+      - name: Validate portable plugin.json
+        run: |
+          ajv validate \
+            -s /tmp/schemas/plugin.schema.json \
+            -d plugins/ramp/plugin.json
+
+      - name: Validate portable mcp.json
+        run: |
+          ajv validate \
+            -s /tmp/schemas/mcp.schema.json \
+            -d plugins/ramp/mcp.json
+
+      - name: Check version consistency
+        run: |
+          set -euo pipefail
+          portable=$(jq -r .version plugins/ramp/plugin.json)
+          for manifest in plugins/ramp/.claude-plugin/plugin.json \
+                          plugins/ramp/.codex-plugin/plugin.json \
+                          plugins/ramp/.cursor-plugin/plugin.json; do
+            native=$(jq -r .version "$manifest")
+            if [ "$portable" != "$native" ]; then
+              echo "::error::Version mismatch: plugin.json=$portable but $manifest=$native"
+              exit 1
+            fi
+          done
+          echo "All manifests at version $portable"
+
+      - name: Validate SKILL.md frontmatter
+        run: |
+          set -euo pipefail
+          errors=0
+          for skill_dir in skills/*/; do
+            skill_file="$skill_dir/SKILL.md"
+            [ -f "$skill_file" ] || continue
+            name=$(sed -n '/^---$/,/^---$/{ /^name:/p }' "$skill_file" | head -1)
+            if [ -z "$name" ]; then
+              echo "::error::$skill_file is missing 'name' in frontmatter"
+              errors=$((errors + 1))
+            fi
+            desc=$(sed -n '/^---$/,/^---$/{ /^description:/p }' "$skill_file" | head -1)
+            if [ -z "$desc" ]; then
+              echo "::error::$skill_file is missing 'description' in frontmatter"
+              errors=$((errors + 1))
+            fi
+          done
+          if [ "$errors" -gt 0 ]; then
+            echo "$errors skill(s) failed frontmatter validation"
+            exit 1
+          fi
+          echo "All skills passed frontmatter validation"

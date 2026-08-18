@@ -2,6 +2,7 @@
 
 [![skills.sh](https://skills.sh/b/ramp-public/skills)](https://skills.sh/ramp-public/skills)
 [![Agent Skills Spec](https://img.shields.io/badge/Agent%20Skills-Specification-blue)](https://agentskills.io)
+[![Agent Plugins v1.0.0](https://img.shields.io/badge/Agent%20Plugins-v1.0.0-purple)](https://agent-plugins.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 **Official Ramp skills for AI coding agents.**
@@ -76,8 +77,9 @@ Agent plugins that bundle these skills with client-specific configuration live u
 
 - [`plugins/ramp`](plugins/ramp/) — the official Ramp plugin, including MCP server config,
   the `ramp-safety` rule, the `/ramp-approvals` command, and a mirror of the skill catalog.
-  It supports the shared agent plugin format and native client discovery, superseding the
-  standalone [ramp-public/cursor-plugin](https://github.com/ramp-public/cursor-plugin) repo.
+  It conforms to the [Agent Plugins v1.0.0](https://agent-plugins.org) specification (portable
+  `plugin.json` and `mcp.json`) and ships native manifests for Claude, Codex, and Cursor,
+  superseding the standalone [ramp-public/cursor-plugin](https://github.com/ramp-public/cursor-plugin) repo.
 
 Each plugin's `skills/` directory is a 1:1 mirror of the root catalog, updated by the same sync job — do not PR those directories (plugin-native content like rules, commands, and manifests is maintained here).
 
