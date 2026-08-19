@@ -101,6 +101,17 @@
       "path": "skills/ramp-incorporate"
     },
     {
+      "name": "ramp-make-x402-payment",
+      "description": "Make and verify a small x402 payment from a funded Ramp x402 wallet, using Exa as the default demo merchant or an official x402 Bazaar for discovery. Use when asked to test x402, pay an x402-protected API, or demonstrate a Ramp x402 payment. For wallet provisioning or funding, use ramp-setup-x402-wallet instead.",
+      "area": "Agentic Commerce",
+      "supported_surfaces": [
+        "browser",
+        "cli",
+        "mcp"
+      ],
+      "path": "skills/ramp-make-x402-payment"
+    },
+    {
       "name": "ramp-manage-bills",
       "description": "Search, inspect, and manage vendor bills and invoices. Use when:\n'find a bill', 'show me pending bills', 'bill details', 'look up a bill',\n'draft bill details', 'bill attachments', 'what bills need my approval'.\nDo NOT use for: approving bills (use ramp-approval-dashboard), uploading vendor\ndocuments (use ramp-manage-vendors), or card transaction management\n(use ramp-complete-expenses).",
       "area": "Bill Pay",
@@ -148,6 +159,17 @@
         "mcp"
       ],
       "path": "skills/ramp-payment-lookup"
+    },
+    {
+      "name": "ramp-setup-x402-wallet",
+      "description": "Set up and fund a Ramp x402 wallet from a Ramp Checking account. Use when an owner or admin of a company's Ramp account asks to enable, provision, fund, or prepare x402 payments. For an already-funded wallet and a specific x402 purchase, use ramp-make-x402-payment instead.",
+      "area": "Agentic Commerce",
+      "supported_surfaces": [
+        "browser",
+        "cli",
+        "mcp"
+      ],
+      "path": "skills/ramp-setup-x402-wallet"
     },
     {
       "name": "ramp-spend-analysis",

@@ -6,7 +6,9 @@
       "title": "Agentic Commerce",
       "description": "Make agent-driven purchases and programmable payments.",
       "skills": [
-        "ramp-agentic-purchase"
+        "ramp-agentic-purchase",
+        "ramp-make-x402-payment",
+        "ramp-setup-x402-wallet"
       ]
     },
     {
