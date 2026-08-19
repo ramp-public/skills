@@ -131,6 +131,15 @@
       "path": "skills/ramp-manage-vendors"
     },
     {
+      "name": "ramp-onboard-standalone-agent",
+      "description": "Create, connect, and safely verify a standalone Ramp agent for a clearly defined job. Use when a Ramp admin needs a machine identity for reporting, bill intake, bill approval, payment release, or expense cleanup. For a person's initial Ramp or CLI setup, use ramp-get-started instead.",
+      "area": "Getting Started",
+      "supported_surfaces": [
+        "cli"
+      ],
+      "path": "skills/ramp-onboard-standalone-agent"
+    },
+    {
       "name": "ramp-payment-lookup",
       "description": "Look up vendor bill payments and verify payment status from the terminal.\nUse when: 'did we pay', 'payment status', 'check if paid', 'verify payment',\n'find invoice', 'bill lookup', 'was this bill paid', 'payment confirmation'.\nDo NOT use for: approving bills (use ramp-approval-dashboard), spend analysis\nacross vendors (use ramp-spend-analysis), or uploading receipts (use ramp-complete-expenses).",
       "area": "Bill Pay",

@@ -54,6 +54,7 @@ Tool contracts (parameters, semantics) are identical on both; each operation is 
 | Make a purchase with an agent card | `ramp-agentic-purchase` |
 | Apply to Ramp / incorporate a company | `ramp-apply-for-account`, `ramp-incorporate` |
 | Set up their agent for Ramp from scratch | `ramp-get-started` |
+| Create, connect, or verify a standalone agent | `ramp-onboard-standalone-agent` |
 
 ## Canonical links
 
