@@ -27,7 +27,7 @@ Tool contracts (parameters, semantics) are identical on both; each operation is 
 | Accounting | Coding hygiene, missing items, ERP sync readiness | tracking category, sync run, missing items | `ramp-complete-expenses` *(close-books coming)* |
 | Vendor Management | Vendors (payees), agreements/contracts, vendor documents | vendor, agreement/contract, vendor document | `ramp-manage-vendors` |
 | Reimbursements | Out-of-pocket expense reimbursement | reimbursement, receipt | `ramp-submit-reimbursement` |
-| Agentic commerce | Agent cards, browser checkout | agent card fund, payment token | `ramp-agentic-purchase` |
+| Agentic commerce | Agent cards, browser checkout, x402 wallets, programmable USDC payments | agent card fund, payment token, x402 wallet, x402 payment | `ramp-agentic-purchase`, `ramp-setup-x402-wallet`, `ramp-make-x402-payment` |
 
 ### Entity disambiguation
 
@@ -52,6 +52,8 @@ Tool contracts (parameters, semantics) are identical on both; each operation is 
 | Submit an out-of-pocket expense | `ramp-submit-reimbursement` |
 | Upload vendor documents (W-9s, contracts, COIs) | `ramp-manage-vendors` |
 | Make a purchase with an agent card | `ramp-agentic-purchase` |
+| Set up or fund a Ramp x402 wallet | `ramp-setup-x402-wallet` |
+| Make or test an x402 payment | `ramp-make-x402-payment` |
 | Apply to Ramp / incorporate a company | `ramp-apply-for-account`, `ramp-incorporate` |
 | Set up their agent for Ramp from scratch | `ramp-get-started` |
 | Create, connect, or verify a standalone agent | `ramp-onboard-standalone-agent` |
