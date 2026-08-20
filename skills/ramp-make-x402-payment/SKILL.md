@@ -32,6 +32,9 @@ later.
 - Never expose the signed payment header in chat, logs, screenshots, or the
   final answer. Keep temporary files private and delete them after the request.
 - Every Ramp agent-tool call needs a non-empty `rationale`.
+- Generate each rationale from the user's actual request or immediately preceding
+  confirmation. Keep it concise and action-specific; do not reuse a canned
+  rationale sentence.
 
 ## 1. Verify tool access and wallet balance
 
@@ -44,10 +47,10 @@ ramp x402 pay --help
 ```
 
 If the tool is absent, disabled, or returns an authorization, permission, scope,
-or availability error, stop and tell the user that Ramp x402 payment access is
-not available for their account. Ask them to contact their Ramp account team or
-Ramp Support, then reconnect Ramp and try again. Do not mention internal rollout
-names.
+or availability error, stop and direct the user to
+[agents@ramp.com](mailto:agents@ramp.com) or
+[agents.ramp.com](https://agents.ramp.com/), then reconnect Ramp and try again.
+Do not mention internal rollout names.
 
 Use the wallet address returned by `ramp-setup-x402-wallet`. If no trusted wallet
 address is available in the conversation or user-provided setup record, stop and
@@ -270,12 +273,16 @@ selected `accepted` entry, `resource`, and top-level `extensions` without
 inventing fields:
 
 ```bash
+IDEMPOTENCY_KEY="$(python3 -c 'import uuid; print(uuid.uuid4())')"
+RATIONALE="<concise payment rationale from the user's exact confirmation>"
 jq --slurpfile accepted "$WORK/accepted.json" \
-  --arg rationale "User confirmed the displayed x402 payment to the selected merchant" '
+  --arg idempotency_key "$IDEMPOTENCY_KEY" \
+  --arg rationale "$RATIONALE" '
   {
     accepted: $accepted[0],
     resource: .resource,
     extensions: (.extensions // null),
+    idempotency_key: $idempotency_key,
     rationale: $rationale
   }
 ' "$WORK/challenge.json" > "$WORK/ramp-payment.json"
@@ -286,11 +293,15 @@ Require `accepted` to be non-null and equal to the entry shown to the user.
 Then call the Ramp MCP payment tool with that object or run:
 
 ```bash
-ramp --agent x402 pay \
+ramp x402 pay \
   --json "$(jq -c . "$WORK/ramp-payment.json")" \
   > "$WORK/ramp-payment-result.json"
 chmod 600 "$WORK/ramp-payment-result.json"
 ```
+
+`ramp general pay` is not an x402 payment command. Use `ramp x402 pay` and keep
+the generated `idempotency_key` with this exact signing attempt; do not reuse it
+for a fresh challenge.
 
 Require the result's `payment_header_name` to equal `PAYMENT-SIGNATURE`
 case-insensitively. Keep `payment_header_value` private. Retry the exact same
