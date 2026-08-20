@@ -24,6 +24,9 @@ permission, or approval state.
   wallet signing material. The user completes Ramp sign-in and approvals in
   Ramp-controlled browser pages.
 - Every Ramp agent-tool call needs a non-empty `rationale`.
+- Generate each rationale from the user's actual request or immediately preceding
+  confirmation. Keep it concise and action-specific; do not reuse a canned
+  rationale sentence.
 - Use only an account UUID returned by `treasury accounts`; never infer or reuse
   an identifier from another source.
 - Funding is an irreversible transfer from Ramp Checking. Use a new idempotency
@@ -80,14 +83,9 @@ equivalents of:
 - Fund an x402 wallet (`x402 fund`)
 
 If any required tool is absent, disabled, or returns an authorization,
-permission, scope, or availability error, stop. Tell the user:
-
-```text
-Ramp x402 setup is not available with your current account access. Please reach
-out to your Ramp account team or Ramp Support to request access, then reconnect
-Ramp and try again.
-```
-
+permission, scope, or availability error, stop. Tell the user to contact
+[agents@ramp.com](mailto:agents@ramp.com) or visit
+[agents.ramp.com](https://agents.ramp.com/), then reconnect Ramp and try again.
 Do not expose internal rollout names or recommend broader permissions as a
 workaround.
 
@@ -105,8 +103,9 @@ Only after the user confirms their company-level role and provisioning, call the
 Ramp MCP tool or run:
 
 ```bash
+RATIONALE="<concise provisioning rationale from the user's confirmation>"
 ramp x402 create --confirmed \
-  --rationale "User confirmed they are an owner or admin of the company's Ramp account and approved provisioning its x402 wallet"
+  --rationale "$RATIONALE"
 ```
 
 Record the returned wallet address and require `status` to be `sign_ready`.
@@ -119,12 +118,15 @@ stop and relay the actionable error without retrying.
 List every Ramp Checking account visible to the user:
 
 ```bash
+RATIONALE="<concise account-listing rationale from the user's request>"
 ramp treasury accounts --agent \
-  --rationale "List Ramp Checking accounts and available balances for x402 wallet funding"
+  --rationale "$RATIONALE"
 ```
 
-Present each returned account's `name`, `status`, `available_balance`,
-`currency`, and `provider`. Do not display account numbers or unrelated fields.
+Before an amount is selected, present candidate funding sources first and list
+accounts that fail provider, currency, or status requirements separately with the
+exact reason. Show only each account's `name`, `status`, `available_balance`,
+`currency`, and `provider`; never show account numbers or unrelated fields.
 
 An eligible funding source must be:
 
@@ -142,18 +144,22 @@ Checking account in Ramp, then return here to continue setup.
 ```
 
 If eligible accounts exist, let the user select the exact account and USD
-amount of at least $1. Never choose for them. Reject amounts below $1 or above
-the selected account's available balance before confirmation. Show a funding
-preview:
+amount of at least $1. Never choose for them. After the user names an amount,
+re-sort the accounts: show accounts with sufficient balance first, and list every
+other account separately with `insufficient available balance` or its applicable
+provider, currency, or status reason. Reject amounts below $1 or above the
+selected account's available balance before confirmation. Show a funding preview:
 
 ```text
 From: <Ramp Checking account name>
 Available balance: <formatted USD balance>
 To: Ramp x402 wallet <wallet address>
 Amount: <formatted USD amount>
+Settlement: may take up to 15 minutes; I will monitor it automatically
 ```
 
-Ask for explicit confirmation of those exact details.
+Ask for explicit confirmation of those exact details, including the source,
+amount, and funding action. Do not fund before that confirmation.
 
 ## 4. Fund the wallet
 
@@ -161,6 +167,7 @@ After confirmation, generate one UUID locally for this transfer:
 
 ```bash
 IDEMPOTENCY_KEY="$(python3 -c 'import uuid; print(uuid.uuid4())')"
+RATIONALE="<concise funding rationale from the user's exact confirmation>"
 ```
 
 Call the Ramp MCP funding tool with the selected account UUID, exact amount, and
@@ -170,7 +177,7 @@ idempotency key, or run:
 ramp x402 fund "<source_wallet_account_uuid>" \
   --amount "<confirmed_usd_amount>" \
   --idempotency_key "$IDEMPOTENCY_KEY" \
-  --rationale "User confirmed funding the Ramp x402 wallet from the selected Ramp Checking account"
+  --rationale "$RATIONALE"
 ```
 
 Keep the returned `transfer_uuid`, `status`, source, destination, amount, and
@@ -189,17 +196,26 @@ another transfer until Ramp confirms whether the original transfer exists.
 
 Use the returned transfer status and the selected Ramp Checking account's
 activity in Ramp to determine whether its withdrawal needs approval. If Ramp
-shows a pending approval, tell the user the exact account and amount, open the
-pending withdrawal in the Ramp web app, and ask the assigned approver to review
-it. Do not approve on the user's behalf or imply that access to the funding tool
-is approval authority.
+shows a pending approval, tell the user the exact account and amount. For a
+browser-capable harness, open:
+
+```text
+https://app.ramp.com/business-accounts/<source_wallet_account_uuid>/pending-approvals
+```
+
+Replace `<source_wallet_account_uuid>` only with the selected account UUID
+returned by `treasury accounts`. This is account-specific; do not add a
+`business_id` or invent another identifier. Ask the assigned approver to review
+the withdrawal there. Do not approve on the user's behalf or imply that access
+to the funding tool is approval authority.
 
 Wait for the user to confirm that the withdrawal was approved. Then inspect the
 transfer again with the Ramp Checking transfer-history tool:
 
 ```bash
+RATIONALE="<concise transfer-status rationale from the user's confirmed funding>"
 ramp treasury transfers --agent \
-  --rationale "Verify the confirmed x402 wallet funding transfer status"
+  --rationale "$RATIONALE"
 ```
 
 Match the funding result's `transfer_uuid` to the transfer history entry's
@@ -223,4 +239,19 @@ When the exact transfer is completed, tell the user:
 - The completed transfer UUID and status
 - That the wallet is ready for an x402 payment
 
-Offer to continue with `ramp-make-x402-payment`.
+Hand off explicitly to `ramp-make-x402-payment`. Suggest discovering services at
+[x402scan.com](https://www.x402scan.com/), while making clear that a listing is
+not an approval or guarantee of compatibility: check the service's x402
+challenge before any payment.
+
+End by asking: `If you have feedback on this setup process, tell me now and I can submit it using the Ramp CLI feedback tool.` If the user provides feedback, pass the complete feedback string as one argv value through the runtime's process API; never interpolate it into shell source. For example:
+
+```python
+import subprocess
+
+subprocess.run(["ramp", "feedback", feedback_text], check=True)
+```
+
+Here, `feedback_text` is the user's complete feedback as runtime data, including
+quotes, command substitutions, semicolons, and newlines. Report whether the
+submission succeeded.
