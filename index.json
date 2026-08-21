@@ -182,14 +182,14 @@
       "path": "skills/ramp-spend-analysis"
     },
     {
-      "name": "ramp-spend-optimization",
-      "description": "Find credible potential savings and account-control opportunities across Ramp spend,\nexplain the evidence and confidence, and safely configure supported fund controls after\nan exact preview and explicit approval. Use when: \"optimize my Ramp account\", \"find\nsavings\", \"clean up recurring vendor spend\", \"consolidate vendor spend\", \"duplicate\nsubscriptions\", \"oversized funds\", or \"move recurring vendor spend onto a controlled\ncard\". Do NOT use for a general spend report (use ramp-spend-analysis), expense cleanup\nor missing receipts (use ramp-complete-expenses), approvals (use ramp-approval-dashboard),\nsubscription cancellation, or vendor-site payment changes.",
+      "name": "ramp-spend-audit",
+      "description": "Review Ramp spend for possible duplicate software, fragmented vendor payments,\nunused funds, oversized limits, and recurring-spend controls. Use when a customer\nasks for a spend audit, savings opportunities, or safer recurring spending.\nThis skill identifies opportunities; it does not cancel subscriptions or change\nvendor-side payment settings.",
       "area": "Cards and Spend",
       "supported_surfaces": [
         "cli",
         "mcp"
       ],
-      "path": "skills/ramp-spend-optimization"
+      "path": "skills/ramp-spend-audit"
     },
     {
       "name": "ramp-submit-procurement-request",
