@@ -2,8 +2,13 @@ name: Release Ramp Skills
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
+
+concurrency:
+  group: release-ramp-skills
+  cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: write
@@ -72,8 +77,25 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ github.ref_name }}" \
+          set -euo pipefail
+
+          tag="v0.1.${GITHUB_RUN_NUMBER}"
+          gh release create "$tag" \
             --repo "${{ github.repository }}" \
+            --target "$GITHUB_SHA" \
             --generate-notes \
+            --latest=false \
             ramp-skills.tar.gz \
             ramp-skills.tar.gz.sha256
+
+          main_sha="$(
+            gh api "repos/${{ github.repository }}/git/ref/heads/main" \
+              --jq '.object.sha'
+          )"
+          if [[ "$GITHUB_SHA" == "$main_sha" ]]; then
+            gh release edit "$tag" \
+              --repo "${{ github.repository }}" \
+              --latest
+          else
+            echo "Not marking $tag as latest: $GITHUB_SHA is no longer the main head ($main_sha)"
+          fi
