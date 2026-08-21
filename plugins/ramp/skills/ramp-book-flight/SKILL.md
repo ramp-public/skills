@@ -586,6 +586,7 @@ flight number, or timestamp.
 
 ```bash
 ramp travel bookings --include_flights --output json \
+  --city SFO --travel_date 2026-07-01 \
   --rationale "verify the Toronto→SFO Jul 1 booking reached a terminal status"
 ```
 
@@ -594,11 +595,18 @@ MCP:
 ```json
 {
   "include_flights": true,
+  "city": "SFO",
+  "travel_date": "2026-07-01",
   "rationale": "verify the Toronto→SFO Jul 1 booking reached a terminal status"
 }
 ```
 
 Call `GetBookings` with the above.
+
+Use the known city, airline, flight number, and travel date as lookup filters. They combine
+with AND and are applied before the result limit. Flight-number matching ignores spaces,
+punctuation, case, and leading zeroes in the numeric portion. If `results_truncated` is true,
+add another known filter and retry rather than treating the returned entries as exhaustive.
 
 For delegated bookings, pass the same `--traveler_user_id` when verifying and on every retry;
 otherwise `travel bookings` checks the requester's bookings.
@@ -713,10 +721,14 @@ Five supporting tools; use when relevant, not on every booking.
   `SubmitFlightBooking`. Note: delegated trip lookup is not exposed on MCP; `GetUserTrips`
   returns the caller's own trips only.
 - **`travel bookings`** (CLI) / `GetBookings` (MCP) — existing flight/hotel bookings
-  (`--include_flights`/`--include_hotels`, `--limit` / `include_flights`, `include_hotels`,
-  `limit`). Each has a `status` (`CONFIRMED`/`PENDING_APPROVAL`/`FAILED` + `error_message`),
-  route/times, `trip_name`/`trip_id`. **Source of truth for whether a booking succeeded**
-  (Phase 3) and for "what flights do I have booked?".
+  (`--include_flights`/`--include_hotels`, `--city`, `--hotel_name`, `--flight_airline`,
+  `--flight_number`, `--travel_date`, `--limit` / their corresponding MCP fields). Supplied
+  filters for the same booking type combine with AND before the limit; mixed hotel- and
+  flight-specific filters match each type independently. Each entry has a `status`
+  (`CONFIRMED`/`PENDING_APPROVAL`/`FAILED` + `error_message`), route/times, and
+  `trip_name`/`trip_id`. If `results_truncated` is true, narrow the filters before treating the
+  result as exhaustive. **Source of truth for whether a booking succeeded** (Phase 3) and for
+  "what flights do I have booked?".
 - **`travel booking-details`** (CLI) / `GetBookingDetails` (MCP) — detailed status for one
   exact `travel bookings` / `GetBookings` entry ID when the booking support capability is
   available. Use it for `request_status`, `current_total_amount`, `error_message`, and
@@ -733,11 +745,13 @@ accounts (see "If cancellation is unavailable").
 ### Identify the exact booking first
 
 Never guess which booking to cancel. Resolve it from `ramp travel bookings --include_flights
---output json` (same `--traveler_user_id` for delegated travelers) and use the exact entry
-`id` — the same exact ID the skill already uses with `travel booking-details`. If more than
-one booking could match ("cancel my SFO flight"), show the likely matches and ask which one;
-never pick by route, date, or recency on your own. If the traveler pasted an ID that this
-conversation's `travel bookings` never returned, look the booking up first instead of
+--output json` (same `--traveler_user_id` for delegated travelers), passing every known `city`,
+`flight_airline`, `flight_number`, and `travel_date` filter, and use the exact entry `id` — the
+same exact ID the skill already uses with `travel booking-details`. If more than one booking
+could match ("cancel my SFO flight"), show the likely matches and ask which one; never pick by
+route, date, or recency on your own. If `results_truncated` is true, ask for another identifying
+detail and run a narrower lookup before selecting a booking. If the traveler pasted an ID that
+this conversation's `travel bookings` never returned, look the booking up first instead of
 trusting the pasted value.
 
 Cancellation applies to a fulfilled booking. For an unfulfilled request (e.g.

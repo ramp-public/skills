@@ -512,17 +512,24 @@ hotel is confirmed. Show the returned booking status and approval state accurate
 CLI:
 ```bash
 ramp travel bookings --output json \
+  --hotel_name "citizenM New York Bowery" --travel_date 2026-08-10 \
   --rationale "verify the Lower Manhattan hotel booking request, Aug 10-13"
 ```
 
 MCP:
 ```json
 {
+  "hotel_name": "citizenM New York Bowery",
+  "travel_date": "2026-08-10",
   "rationale": "verify the Lower Manhattan hotel booking request, Aug 10-13"
 }
 ```
 
 Call `GetBookings` with the above.
+
+Use the known city, hotel name, and stay date as lookup filters. They combine with AND and are
+applied before the result limit. If `results_truncated` is true, add another known filter and
+retry rather than treating the returned entries as exhaustive.
 
 For delegated booking, pass the same traveler UUID. Retain the exact `booking.booking_request_id`
 from confirmation and match it to the same `booking_request_id` in the bookings response. The
@@ -562,12 +569,14 @@ accounts (see "If cancellation is unavailable"). It always cancels the entire ho
 
 Never guess which booking to cancel. Resolve it from `ramp travel bookings --output json`
 (CLI) / `GetBookings` (MCP) (same `--traveler_user_id` / `traveler_user_id` for delegated
-travelers) and use the exact entry `id` — the same exact ID this skill already uses with
-`travel booking-details` / `GetBookingDetails`. If more than one booking could match ("cancel
-my New York hotel"), show the likely matches and ask which one; never pick by hotel name,
-dates, or recency on your own. If the traveler pasted an ID that this conversation's
-`travel bookings` / `GetBookings` never returned, look the booking up first instead of
-trusting the pasted value.
+travelers), passing every known `city`, `hotel_name`, and `travel_date` filter, and use the
+exact entry `id` — the same exact ID this skill already uses with `travel booking-details` /
+`GetBookingDetails`. If more than one booking could match ("cancel my New York hotel"), show
+the likely matches and ask which one; never pick by hotel name, dates, or recency on your own.
+If `results_truncated` is true, ask for another identifying detail and run a narrower lookup
+before selecting a booking. If the traveler pasted an ID that this conversation's `travel
+bookings` / `GetBookings` never returned, look the booking up first instead of trusting the
+pasted value.
 
 Cancellation applies to a fulfilled booking. For an unfulfilled request (e.g.
 `PENDING_APPROVAL`), the entry `id` is the request UUID, which this command will not find —
