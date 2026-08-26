@@ -21,8 +21,8 @@ Tool contracts (parameters, semantics) are identical on both; each operation is 
 |---|---|---|---|
 | Cards & Spend | Corporate cards, transactions, attention-feed tasks, funds (spend allocations), receipts, memos, coding | task, card, transaction, fund, receipt, tracking category, merchant | `ramp-complete-tasks`, `ramp-complete-expenses`, `ramp-spend-analysis`, `ramp-spend-audit`, `ramp-card-management`, `ramp-approval-dashboard` |
 | Bill Pay | Vendor bills/invoices, payment status, approvals, recurring bills | bill, draft bill, recurring bill, payment, vendor (payee) | `ramp-manage-bills`, `ramp-payment-lookup`, `ramp-approval-dashboard` |
-| Procurement | Purchase requests, purchase orders, request approvals | unified request, purchase order | `ramp-submit-procurement-request`, `ramp-manage-procurement` |
-| Travel | Flight and hotel search/booking under company policy | trip, booking, policy | `ramp-book-flight`, `ramp-book-hotel` |
+| Procurement | Purchase requests, purchase orders, request approvals, sourcing events (RFP/RFI/RFQ) | unified request, purchase order, sourcing event, RFX | `ramp-submit-procurement-request`, `ramp-manage-procurement`, `ramp-run-sourcing-event`, `ramp-manage-sourcing` |
+| Travel | Flight and hotel search/booking under company policy, including travel approvals | trip, booking, booking request, policy | `ramp-book-flight`, `ramp-book-hotel`, `ramp-approval-dashboard` |
 | Banking & Treasury | Ramp checking accounts, investment/managed-portfolio balances, transfers | treasury account (checking / investment / managed portfolio), wallet transfer | *(flagship skill coming — see area folder)* |
 | Accounting | Coding hygiene, missing items, ERP sync readiness | tracking category, sync run, missing items | `ramp-complete-expenses` *(close-books coming)* |
 | Vendor Management | Vendors (payees), agreements/contracts, vendor documents | vendor, agreement/contract, vendor document | `ramp-manage-vendors` |
@@ -44,6 +44,7 @@ Tool contracts (parameters, semantics) are identical on both; each operation is 
 | Resolve a card locked until overdue tasks are completed | `ramp-complete-tasks`, then `ramp-card-management` to verify card state |
 | Fix missing memos/categories/receipts on card spend | `ramp-complete-expenses` |
 | See or act on their approval queue | `ramp-approval-dashboard` |
+| Review, approve, or reject travel requests | `ramp-approval-dashboard` |
 | Find/track a bill or a bill payment | `ramp-manage-bills`, `ramp-payment-lookup` |
 | Analyze spend by vendor/category/team, including broad AI-spend questions | `ramp-spend-analysis` |
 | Find spend issues such as software we may be paying for twice, unused funds, high limits, or vendors paid in more than one way | `ramp-spend-audit` |

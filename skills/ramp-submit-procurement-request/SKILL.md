@@ -7,8 +7,9 @@ description: |-
   Ramp procurement requests. Use when: 'submit a procurement request', 'start a
   purchase request', 'continue my draft', 'request to buy', 'create a PO
   request', 'change an approved PO', or 'submit a software purchase'. Do NOT use
-  to track or approve a submitted request (use ramp-manage-procurement), or for
-  reimbursements, bills, card expenses, vendor onboarding documents, or
+  to track or approve a submitted request (use ramp-manage-procurement), to run
+  an RFP or sourcing event to evaluate vendors (use ramp-run-sourcing-event), or
+  for reimbursements, bills, card expenses, vendor onboarding documents, or
   contract changes not tied to an approved Ramp PO.
 ---
 
