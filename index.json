@@ -172,7 +172,7 @@
     },
     {
       "name": "ramp-run-sourcing-event",
-      "description": "Create and launch Ramp sourcing events: build an RFP questionnaire, set the\nvendor-facing cover sheet and pricing sheet, invite\nvendors, and publish to collect proposals. Use when: 'run an RFP', 'create a\nsourcing event', 'draft an RFP', 'send a questionnaire to vendors', 'invite\nvendors to bid', or 'publish our RFP'. Do NOT use to track responses, grade,\naward, or close a running event (use\nramp-manage-sourcing), or to submit a purchase request for a chosen vendor\n(use ramp-submit-procurement-request). This is a requester-side skill; do not\nuse it to RSVP or respond as a vendor.",
+      "description": "Create and launch Ramp sourcing events: build an RFI, RFP, or RFQ\nquestionnaire, set the vendor-facing cover sheet and pricing sheet, invite\nvendors, and publish to collect responses. Use when: 'run an RFP', 'create a\nsourcing event', 'draft an RFQ', 'send a questionnaire to vendors', 'invite\nvendors to bid', or 'publish our RFX'. Do NOT use to track responses, grade,\naward, or close a running event (use\nramp-manage-sourcing), or to submit a purchase request for a chosen vendor\n(use ramp-submit-procurement-request). This is a requester-side skill; do not\nuse it to RSVP or respond as a vendor.",
       "area": "Procurement",
       "supported_surfaces": [
         "cli",

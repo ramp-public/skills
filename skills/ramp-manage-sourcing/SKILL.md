@@ -59,13 +59,17 @@ use `ramp-run-sourcing-event`.
    The event payload includes each RFX with per-vendor invitation status,
    acceptance, and whether a response was submitted.
 
-2. Track one RFX. Use `summary` for progress counts and grading status, and
+2. Track one RFX. Use `summary` for progress counts and grading mode, and
    `responses` only when the user wants the actual submitted answers:
 
    ```bash
    ramp sourcing summary "<rfx_id>" --rationale "Check vendor response and grading progress" --agent
    ramp sourcing responses "<rfx_id>" --rationale "Review the submitted vendor answers" --agent
    ```
+
+   `grading_mode` is `AI_ONLY` or `MANUAL_REVIEW`.
+   `suggested_grading_status` reports AI grade generation for a response, not
+   overall or manual grading completion.
 
 3. Nudge vendors with an ACTIVE invitation who have not rejected participation
    or submitted a response. A per-vendor cooldown prevents duplicate reminders.
@@ -82,10 +86,10 @@ use `ramp-run-sourcing-event`.
    skipped due to cooldown.
 
 4. Review outcomes. The grading overview — AI-generated takeaways,
-   recommendation, and per-vendor section scores — becomes available once the
-   RFX is GRADED or CLOSED. The RFX becomes GRADED after all accepted vendors
-   have submitted, automated grading completes, and no still-open pending RSVP
-   blocks completion.
+   recommendation, per-vendor section scores, and recorded field grades —
+   becomes available once the RFX is GRADED or CLOSED. The RFX becomes GRADED
+   after all accepted vendors have submitted, automated grading completes, and
+   no still-open pending RSVP blocks completion.
 
    `mark-graded` is the normal UI's destructive **End submissions early**
    action, not general finalization. Use it only when at least one response was
@@ -100,7 +104,9 @@ use `ramp-run-sourcing-event`.
 
    Check `grading_insight.status`; do not claim there is an AI recommendation
    when the insight or recommended vendor is absent. Present any recommendation
-   as input, not a decision — the user chooses the winner.
+   as input, not a decision — the user chooses the winner. Each recorded grade's
+   `grade_state` distinguishes an `AUTO_ACCEPTED` AI grade from a
+   `HUMAN_EDITED` grade.
 
 5. Award the winner. Grading must be complete on the current RFX, and the
    winner must have an ACTIVE invitation, have accepted, and have submitted a
