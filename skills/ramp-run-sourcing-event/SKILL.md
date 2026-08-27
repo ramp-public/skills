@@ -4,11 +4,11 @@ area: Procurement
 supported_surfaces: [cli, mcp]
 compatibility: Requires authenticated Ramp CLI or Ramp MCP access and permission to manage sourcing events.
 description: |-
-  Create and launch Ramp sourcing events: build an RFP questionnaire, set the
-  vendor-facing cover sheet and pricing sheet, invite
-  vendors, and publish to collect proposals. Use when: 'run an RFP', 'create a
-  sourcing event', 'draft an RFP', 'send a questionnaire to vendors', 'invite
-  vendors to bid', or 'publish our RFP'. Do NOT use to track responses, grade,
+  Create and launch Ramp sourcing events: build an RFI, RFP, or RFQ
+  questionnaire, set the vendor-facing cover sheet and pricing sheet, invite
+  vendors, and publish to collect responses. Use when: 'run an RFP', 'create a
+  sourcing event', 'draft an RFQ', 'send a questionnaire to vendors', 'invite
+  vendors to bid', or 'publish our RFX'. Do NOT use to track responses, grade,
   award, or close a running event (use
   ramp-manage-sourcing), or to submit a purchase request for a chosen vendor
   (use ramp-submit-procurement-request). This is a requester-side skill; do not
@@ -72,9 +72,8 @@ Vendor RSVP, NDA signing, draft responses, XLSX import/export, final submission,
 and pricing-line entry must be completed in the vendor portal. Do not attempt
 those actions with this requester skill.
 
-Creating an RFP always creates a new event with one RFP. This skill cannot
-create an RFI or RFQ or add another RFX to an existing event; do not offer those
-workflows.
+Creation supports one RFI, RFP, or RFQ in a new sourcing event. This skill
+cannot add another RFX to an existing event; do not offer that workflow.
 
 ## Create the Event and RFX
 
@@ -91,16 +90,25 @@ before concluding that no matching event exists. Keep the same page size:
 ramp sourcing list --page_size 20 --page_cursor "<next_page_cursor>" --rationale "Continue checking for an existing sourcing event" --agent
 ```
 
-Build the RFP questionnaire as sections of fields.
+Choose the RFX type based on the user's goal, recommend one when the choice is
+unclear, and confirm it before creation:
+
+- Use **RFI** to gather capabilities or market information while requirements
+  are still being shaped.
+- Use **RFP** to compare proposed approaches and overall fit for a scoped need.
+- Use **RFQ** to compare pricing and commercial terms for a well-defined need.
+
+Build the selected RFX questionnaire as sections of fields.
 Field types: TEXT, PARAGRAPH, NUMBER, BOOLEAN, DATE, FILE_UPLOAD,
 TEXT_SINGLE_SELECT, TEXT_MULTI_SELECT, ADDRESS, CONTACT, EMAIL, LINK. `choices`
 is a list of plain strings, required for the two select types and invalid
 elsewhere. Section labels must be unique, as must field labels within a
 section.
 
-**Creating an RFP is a write** — confirm the name, deadlines, and section
+**Creating an RFX is a write** — confirm the type, name, deadlines, and section
 outline with the user first. Omit `sourcing_event_id` so the tool creates the
-parent event in the same call:
+parent event in the same call. `rfx_type` accepts `RFI`, `RFP`, or `RFQ` and
+defaults to `RFP` when omitted:
 
 ```bash
 ramp sourcing create --json '{
