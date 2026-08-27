@@ -3,7 +3,8 @@ name: ramp-approval-dashboard
 area: Approvals
 supported_surfaces: [cli, mcp]
 description: |-
-  Review and approve pending transactions, bills, reimbursements, and requests.
+  Review and approve pending transactions, bills, reimbursements, travel requests,
+  and procurement requests.
   Use when: 'approve', 'pending approvals', 'what needs my approval',
   'review transactions', 'approve bills', 'reject', 'approval queue',
   'clear my approvals'. Do NOT use for: transaction analysis, receipt uploads,
@@ -17,7 +18,7 @@ description: |-
 - Rejections require a reason. Approvals do not, but a note is helpful.
 - Confirm with the user before executing approvals — especially bulk operations.
 - Present items sorted by priority: highest dollar amount first.
-- Amounts vary by endpoint: bill `amount` values are numeric **major currency units**; display them directly with the accompanying `currency` and never divide by 100. When totaling bills, group subtotals by `currency`; never combine different currencies or include them in a cross-queue aggregate. Reimbursements are in **dollars**, and transactions are formatted strings ("$135.40").
+- Amounts vary by endpoint: bill `amount` values are numeric **major currency units**; display them directly with the accompanying `currency` and never divide by 100. When totaling bills, group subtotals by `currency`; never combine different currencies or include them in a cross-queue aggregate. Reimbursements are in **dollars**; transactions and travel requests are formatted strings ("$135.40").
 - **Deep links**: If the response contains a `bill_url` (bills) or `reimbursement_link` (reimbursements) field, include it when presenting entity details so the user can click through to the Ramp web app. If these fields are absent, direct the user to the relevant Ramp page (e.g., `https://app.ramp.com/bills`) instead. Never fabricate deep link URLs.
 
 ## Workflow
@@ -39,9 +40,14 @@ ramp reimbursements pending --agent --limit 50 --rationale "Review reimbursement
 
 # Pending requests (paginate with --start; --thoughts is required)
 ramp requests pending --thoughts "Reviewing all pending requests" --page_size 50 --agent --rationale "Review pending requests"
+
+# Pending travel requests
+ramp travel pending --page_size 50 --output json --rationale "Review travel requests pending my approval"
 ```
 
-For each endpoint, check `pagination.next_cursor` in the JSON envelope. If it is not null, re-run the command with that cursor value (via `--next_page_cursor` for transactions, `--page_cursor` for bills, `--start` for requests) until all pages are fetched. Note: `reimbursements pending` does not support cursor-based pagination — it only has `--limit`, so increase the limit if you need more results. Aggregate results before presenting.
+For MCP, call `GetPendingTravelRequests` with a non-empty `rationale`.
+
+For each endpoint, check its next cursor. If it is not null, re-run the command with that cursor value (via `--next_page_cursor` for transactions and travel, `--page_cursor` for bills, `--start` for requests) until all pages are fetched. Note: `reimbursements pending` does not support cursor-based pagination — it only has `--limit`, so increase the limit if you need more results. Aggregate results before presenting.
 
 ### Step 2: Present the queue
 
@@ -66,6 +72,9 @@ Transactions (3 items, $12,500):
 
 Requests (1 item, $650):
   ...
+
+Travel requests (1 item):
+  $842.16  Flight to Toronto  Requested by Priya Shah  Out of policy
 ```
 
 For request rows, preserve the exact `unified_request_id` returned by
@@ -90,6 +99,10 @@ ramp reimbursements list --reimbursement_uuids '["{uuid}"]' --include_policy_ass
 
 # Request details
 ramp requests get {unified_request_id} --agent --rationale "Review request details"
+
+# Travel request details are returned by the pending call. Re-run it immediately
+# before acting if the displayed result may be stale.
+ramp travel pending --page_size 50 --output json --rationale "Refresh travel requests before acting"
 ```
 
 ### Step 4: Execute approvals
@@ -116,7 +129,36 @@ ramp reimbursements approve {reimbursement_uuid} --action reject \
 
 # Approve a request
 ramp requests approve {unified_request_id} --action APPROVE --thoughts "Approved — within team budget" --rationale "Act on the request approval"
+
+# Approve a travel request
+ramp travel approve {booking_request_id} --action approve \
+  --rationale "Approve the exact travel request the user selected"
+
+# Reject a travel request (reason required)
+ramp travel approve {booking_request_id} --action reject \
+  --rejection_reason "Trip is outside the approved travel policy" \
+  --rationale "Reject the exact travel request the user selected"
 ```
+
+For MCP, call `TravelRequestAction` with `booking_request_id`, `action`,
+`rejection_reason` when rejecting, and `rationale`.
+
+## Travel Approval Safety
+
+- Present each travel request separately with its exact `request_id`, booking details,
+  `total_amount`, requester, traveler when different, policy violations, and
+  `soft_approval_notice` when present. Show the soft-approval notice verbatim.
+- A user instruction such as "approve it" or "reject it" is sufficient only when it
+  unambiguously refers to the exact travel request shown in the immediately preceding
+  assistant response. If several requests were shown, ask which request they mean.
+- After acting, the completed request remains the referent of "it." Never reinterpret a
+  repeated command as approval or rejection of the next pending request. Ask the user to
+  identify another request explicitly.
+- The user's explicit approval or rejection after reviewing the request is confirmation;
+  do not ask for a redundant second confirmation. If the user has not reviewed the request,
+  show its details and wait for confirmation before writing.
+- Execute exactly one `TravelRequestAction` per specifically selected request. Report the
+  returned result and never claim success when `success` is false.
 
 ### Step 5: Add comments (optional)
 

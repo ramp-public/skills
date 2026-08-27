@@ -7,7 +7,8 @@ description: |-
   purchase orders. Use when: 'find a PO', 'show procurement request details',
   'purchase order status', 'what procurement requests need approval', or
   'approve this PO request'. Do NOT use to create, continue, edit, review before
-  submission, or submit a draft request (use ramp-submit-procurement-request), or for
+  submission, or submit a draft request (use ramp-submit-procurement-request), to
+  track or award a sourcing event or RFP (use ramp-manage-sourcing), or for
   a cross-product approval queue (use ramp-approval-dashboard).
 ---
 

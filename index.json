@@ -23,7 +23,7 @@
     },
     {
       "name": "ramp-approval-dashboard",
-      "description": "Review and approve pending transactions, bills, reimbursements, and requests.\nUse when: 'approve', 'pending approvals', 'what needs my approval',\n'review transactions', 'approve bills', 'reject', 'approval queue',\n'clear my approvals'. Do NOT use for: transaction analysis, receipt uploads,\nor spend tracking.",
+      "description": "Review and approve pending transactions, bills, reimbursements, travel requests,\nand procurement requests.\nUse when: 'approve', 'pending approvals', 'what needs my approval',\n'review transactions', 'approve bills', 'reject', 'approval queue',\n'clear my approvals'. Do NOT use for: transaction analysis, receipt uploads,\nor spend tracking.",
       "area": "Approvals",
       "supported_surfaces": [
         "cli",
@@ -123,13 +123,23 @@
     },
     {
       "name": "ramp-manage-procurement",
-      "description": "Search, inspect, track, and safely approve submitted procurement requests and\npurchase orders. Use when: 'find a PO', 'show procurement request details',\n'purchase order status', 'what procurement requests need approval', or\n'approve this PO request'. Do NOT use to create, continue, edit, review before\nsubmission, or submit a draft request (use ramp-submit-procurement-request), or for\na cross-product approval queue (use ramp-approval-dashboard).",
+      "description": "Search, inspect, track, and safely approve submitted procurement requests and\npurchase orders. Use when: 'find a PO', 'show procurement request details',\n'purchase order status', 'what procurement requests need approval', or\n'approve this PO request'. Do NOT use to create, continue, edit, review before\nsubmission, or submit a draft request (use ramp-submit-procurement-request), to\ntrack or award a sourcing event or RFP (use ramp-manage-sourcing), or for\na cross-product approval queue (use ramp-approval-dashboard).",
       "area": "Procurement",
       "supported_surfaces": [
         "cli",
         "mcp"
       ],
       "path": "skills/ramp-manage-procurement"
+    },
+    {
+      "name": "ramp-manage-sourcing",
+      "description": "Track and decide running Ramp sourcing events: monitor vendor responses to an\nRFX (RFP, RFI, RFQ), send reminders, review grading outcomes,\naward the winning vendor, and close out. Use when: 'who responded to our\nRFP', 'compare RFP responses', 'remind vendors to respond', 'award the RFP',\nor 'close the sourcing event'. Do NOT use to create, edit, or publish an RFX\nor invite vendors (use ramp-run-sourcing-event), or to fill and submit the\nfollow-on purchase request (use ramp-submit-procurement-request).",
+      "area": "Procurement",
+      "supported_surfaces": [
+        "cli",
+        "mcp"
+      ],
+      "path": "skills/ramp-manage-sourcing"
     },
     {
       "name": "ramp-manage-vendors",
@@ -159,6 +169,16 @@
         "mcp"
       ],
       "path": "skills/ramp-payment-lookup"
+    },
+    {
+      "name": "ramp-run-sourcing-event",
+      "description": "Create and launch Ramp sourcing events: build an RFP questionnaire, set the\nvendor-facing cover sheet and pricing sheet, invite\nvendors, and publish to collect proposals. Use when: 'run an RFP', 'create a\nsourcing event', 'draft an RFP', 'send a questionnaire to vendors', 'invite\nvendors to bid', or 'publish our RFP'. Do NOT use to track responses, grade,\naward, or close a running event (use\nramp-manage-sourcing), or to submit a purchase request for a chosen vendor\n(use ramp-submit-procurement-request). This is a requester-side skill; do not\nuse it to RSVP or respond as a vendor.",
+      "area": "Procurement",
+      "supported_surfaces": [
+        "cli",
+        "mcp"
+      ],
+      "path": "skills/ramp-run-sourcing-event"
     },
     {
       "name": "ramp-setup-x402-wallet",
@@ -193,7 +213,7 @@
     },
     {
       "name": "ramp-submit-procurement-request",
-      "description": "Create, complete, and submit new, existing draft, or approved-PO change-request\nRamp procurement requests. Use when: 'submit a procurement request', 'start a\npurchase request', 'continue my draft', 'request to buy', 'create a PO\nrequest', 'change an approved PO', or 'submit a software purchase'. Do NOT use\nto track or approve a submitted request (use ramp-manage-procurement), or for\nreimbursements, bills, card expenses, vendor onboarding documents, or\ncontract changes not tied to an approved Ramp PO.",
+      "description": "Create, complete, and submit new, existing draft, or approved-PO change-request\nRamp procurement requests. Use when: 'submit a procurement request', 'start a\npurchase request', 'continue my draft', 'request to buy', 'create a PO\nrequest', 'change an approved PO', or 'submit a software purchase'. Do NOT use\nto track or approve a submitted request (use ramp-manage-procurement), to run\nan RFP or sourcing event to evaluate vendors (use ramp-run-sourcing-event), or\nfor reimbursements, bills, card expenses, vendor onboarding documents, or\ncontract changes not tied to an approved Ramp PO.",
       "area": "Procurement",
       "supported_surfaces": [
         "cli",

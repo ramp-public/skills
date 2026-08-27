@@ -52,6 +52,8 @@
       "description": "Create, inspect, and manage procurement requests and purchase orders.",
       "skills": [
         "ramp-manage-procurement",
+        "ramp-manage-sourcing",
+        "ramp-run-sourcing-event",
         "ramp-submit-procurement-request"
       ]
     },
