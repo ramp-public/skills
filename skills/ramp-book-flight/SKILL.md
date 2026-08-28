@@ -834,7 +834,7 @@ Call `SubmitFlightCancellation` with the above.
 
 ### After the result
 
-Relay the result's `message` and `cancellation_state` faithfully. Only `SUCCESS`
+Emit the result's `message` verbatim and report its `cancellation_state`. Only `SUCCESS`
 (`cancelled=true`) means the booking is cancelled; `PENDING`/`PROCESSING` mean the request
 is in flight — say cancellation is in progress, not done. `ACTION_REQUIRED` means the
 booking support team must finish it. Report the refund or credit exactly as the preview and
