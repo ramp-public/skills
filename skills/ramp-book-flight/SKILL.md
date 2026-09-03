@@ -2,7 +2,7 @@
 name: ramp-book-flight
 area: Travel
 supported_surfaces: [cli, mcp]
-description: "Books flights conversationally: resolves cities to airports, searches one-way and round-trip flights, presents and compares offers, previews the fare, and tickets the booking on the traveler's explicit approval. Also cancels an existing flight booking with a preview-then-confirm flow when the cancellation capability is enabled. The user describes a trip in plain language ('book a flight from Toronto to SFO') and never needs to know a CLI command or tool name. Use when someone wants to book, find, search, or compare flights, says 'fly from X to Y', or wants to cancel a flight they booked. Not for changes, refund-status follow-ups, seat selection, hotels, cars, or multi-city trips."
+description: "Books flights conversationally: resolves cities to airports, searches one-way and round-trip flights, presents and compares offers, previews the fare, offers optional preference-aware seat selection before booking, and tickets the booking on the traveler's explicit approval. Also cancels an existing flight booking with a preview-then-confirm flow when the cancellation capability is enabled. The user describes a trip in plain language ('book a flight from Toronto to SFO') and never needs to know a CLI command or tool name. Use when someone wants to book, find, search, or compare flights, says 'fly from X to Y', or wants to cancel a flight they booked. Not for changes, refund-status follow-ups, seat changes on an already-booked flight, hotels, cars, or multi-city trips."
 ---
 
 # Book a Flight (conversational flight search)
@@ -33,12 +33,14 @@ plain travel language ("Let me pull up the fare and check it before booking…")
 - ✅ Compare cabins/fares — **only when asked** (see "Cabin and fare options").
 - ✅ Read or update the traveler's profile, and read trips and bookings (see "Supporting tools").
 - ✅ Book for another traveler when explicitly asked and authorized (see "Delegated booking").
+- ✅ **Pick seats before booking** — optional, preference-aware, free-first (see
+  "Seat selection"). Save seats before booking, never on the confirm call.
 - ✅ **Cancel an existing flight booking** — preview the exact terms, confirm only on an explicit
   yes (see "Cancelling a flight booking"). Availability is per-business; degrade gracefully when
   the command is missing.
-- ❌ Changes/modifications, refund-status follow-ups after a cancellation, hotels, cars, and
-  multi-city are outside this flow — point the traveler to the Ramp web app
-  or the booking's support channel instead.
+- ❌ Changes/modifications, refund-status follow-ups after a cancellation, seat changes on an
+  already-booked flight, hotels, cars, and multi-city are outside this flow — point the
+  traveler to the Ramp web app or the booking's support channel instead.
 
 ## Rules for every command
 
@@ -535,28 +537,122 @@ books LHR → JFK on Delta, departing Mon, Jul 6, 2026 at 10:00 AM, for **$412 t
 from the Travel fund. Book it?"* For a round-trip, include both outbound and return dates and
 times. Stop and wait.
 
-### Phase 2 — confirm (only after a clear "yes")
+### Seat selection (optional — between preview and confirm)
 
-Add `--action confirm` and pass the preview's numeric `expected_total_amount` verbatim as
-`--expected_total_amount` (with no currency symbol). This rejects the booking if the fare moved
-instead of quietly charging more. Do not copy the display-formatted `total_amount`.
-For delegated bookings, pass the same `--traveler_user_id` used in the preview.
+Seats are saved onto the quote and included when the flight is booked. A seat is never charged
+until the booking itself is confirmed. `flight_quote_uuid` is an internal parameter; never refer
+to it as a quote when speaking with the traveler.
+
+- After the first preview, when its `seat_options` is non-empty, offer seat selection **once**:
+  *"Seat selection is available. Want to pick seats now, or skip?"* Never re-offer after the
+  traveler declines, and never enter this flow when `seat_options` is empty or missing.
+  Seat availability is per-segment: a round trip may have seats on only one leg. Group
+  `seat_options` by `segment_id` to find which legs have seats. Offer seats only for those
+  legs, naming them so the traveler knows which flights are covered. Never ask about or claim
+  seat selection for a leg with no options.
+- `seat_options=null` means seat selection was not returned for this preview, for example when
+  the seat-selection rollout is disabled. `seat_options=[]` means the provider returned no
+  selectable seats. In either case, do not claim that the fare has no selectable seats or that
+  seats will be assigned automatically.
+- Each option carries `designator` (e.g. "18F"), `position` (`window`/`aisle`/`middle` when
+  derivable), `amount`/`currency`, and `disclosures`.
+- When the preview's `traveler_seat_preference` is set, **skip the preference question** and
+  recommend seats in that position directly: *"Based on your preference for window seats, we
+  have 18F available."* Otherwise ask once whether they prefer window, aisle, or any free
+  seat. If they state a durable preference, save it with `travel preferences-update` /
+  `UpdateTravelPreferences` using `seat_preference` while continuing to recommend seats from
+  the stated value; do not wait for that write before responding. Do not save a one-trip
+  preference. For delegated bookings, do not call `UpdateTravelPreferences` — it
+  updates the requester's profile, not the traveler's; keep the preference
+  quote-scoped only. For delegated bookings, do not call `UpdateTravelPreferences` — it
+  updates the requester's profile, not the traveler's; keep the preference
+  quote-scoped only.
+- Recommend the best **free** seat matching the preference plus one alternative, stating any
+  disclosures (for example, limited recline). When the preview's
+  `paid_seat_selection_disabled` is true, do not offer or select any paid seat —
+  recommend only free seats and tell the traveler that paid seat selection is not
+  available for this flight. When `paid_seat_selection_disabled` is false or absent,
+  offer a paid seat only when no free seat fits. A stored preference never authorizes a paid
+  seat: select one only after stating its exact fee and getting explicit consent. Work
+  through only the legs that have `seat_options`, in itinerary order; skip legs
+  with no options entirely.
+- Save the choices by calling `SubmitFlightBooking` with `action=save_seats` and the preview's
+  `flight_quote_uuid` (instead of `flight_offer_uuid`) plus `seat_selections` built from
+  `seat_options` — resolve the traveler's reply (for example, "18F") to the matching option's
+  `segment_id` and `service_id`; never invent designators or pass free-text seat labels. A
+  `service_id` of `null` clears that segment's saved seat. Call `save_seats` exactly once,
+  after the traveler has answered for every leg that has `seat_options`; do not save
+  after each leg individually. If the traveler skipped every eligible leg, skip the call. Call `save_seats` exactly once,
+  after the traveler has answered for every leg that has `seat_options`; do not save
+  after each leg individually. If the traveler skipped every eligible leg, skip the call.
 
 ```bash
-ramp travel book "<flight_offer_uuid>" --action confirm \
-  --expected_total_amount <preview_expected_total_amount> --output json \
-  --rationale "book the Toronto→SFO Jul 1 trip; traveler approved the previewed fare"
+ramp travel book-flight --json '{"action":"save_seats","flight_quote_uuid":"<flight_quote_uuid_from_preview>","seat_selections":[{"segment_id":"<segment_id>","service_id":"<service_id>"}]}' \
+  --output json \
+  --rationale "save seat 18F on the Toronto→SFO Jul 1 quote and refresh the preview"
 ```
 
 MCP:
 
 ```json
 {
+  "action": "save_seats",
+  "flight_quote_uuid": "{flight_quote_uuid_from_preview}",
+  "seat_selections": [{"segment_id": "{segment_id}", "service_id": "{service_id}"}],
+  "rationale": "save seat 18F on the Toronto→SFO Jul 1 quote and refresh the preview"
+}
+```
+
+Call `SubmitFlightBooking` with the above.
+
+- The refreshed preview includes the saved seats and the new authoritative total. State the new
+  total and get a **fresh explicit confirmation** before Phase 2. Never pass `seat_selections`
+  with `action=confirm` — confirming books the quote exactly as last previewed, including its
+  saved seats.
+- If a seat is reported no longer available, re-run the preview with the same
+  `flight_quote_uuid` for refreshed `seat_options` and offer alternatives; never retry the same
+  `service_id`.
+
+### Phase 2 — confirm (only after a clear "yes")
+
+Add `--action confirm` and pass the preview's numeric `expected_total_amount` verbatim as
+`--expected_total_amount` (with no currency symbol). This rejects the booking if the fare moved
+instead of quietly charging more. Do not copy the display-formatted `total_amount`.
+For delegated bookings, pass the same `--traveler_user_id` used in the preview.
+If seats were saved (see "Seat selection"), confirm with the same `flight_quote_uuid` in place
+of `flight_offer_uuid` and the **refreshed** preview's `expected_total_amount`.
+
+```bash
+# Without saved seats:
+ramp travel book "<flight_offer_uuid>" --action confirm \
+  --expected_total_amount <preview_expected_total_amount> --output json \
+  --rationale "book the Toronto→SFO Jul 1 trip; traveler approved the previewed fare"
+
+# With saved seats (use flight_quote_uuid instead of flight_offer_uuid):
+ramp travel book "<flight_quote_uuid>" --action confirm \
+  --expected_total_amount <refreshed_preview_expected_total_amount> --output json \
+  --rationale "book the Toronto→SFO Jul 1 trip; traveler approved the previewed fare with seats"
+```
+
+MCP:
+
+```json
+// Without saved seats:
+{
   "flight_offer_uuid": "{flight_offer_uuid}",
   "action": "confirm",
   "expected_total_amount": "{preview_expected_total_amount}",
   "spend_allocation_id": "{fund_uuid_from_latest_preview}",
   "rationale": "book the Toronto→SFO Jul 1 trip; traveler approved the previewed fare"
+}
+
+// With saved seats (use flight_quote_uuid instead of flight_offer_uuid):
+{
+  "flight_quote_uuid": "{flight_quote_uuid}",
+  "action": "confirm",
+  "expected_total_amount": "{refreshed_preview_expected_total_amount}",
+  "spend_allocation_id": "{fund_uuid_from_latest_preview}",
+  "rationale": "book the Toronto→SFO Jul 1 trip; traveler approved the previewed fare with seats"
 }
 ```
 
