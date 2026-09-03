@@ -33,7 +33,7 @@
     },
     {
       "name": "ramp-book-flight",
-      "description": "Books flights conversationally: resolves cities to airports, searches one-way and round-trip flights, presents and compares offers, previews the fare, offers optional preference-aware seat selection before booking, and tickets the booking on the traveler's explicit approval. Also cancels an existing flight booking with a preview-then-confirm flow when the cancellation capability is enabled. The user describes a trip in plain language ('book a flight from Toronto to SFO') and never needs to know a CLI command or tool name. Use when someone wants to book, find, search, or compare flights, says 'fly from X to Y', or wants to cancel a flight they booked. Not for changes, refund-status follow-ups, seat changes on an already-booked flight, hotels, cars, or multi-city trips.",
+      "description": "Books flights conversationally: resolves cities to airports, searches one-way and round-trip flights, presents and compares offers, previews the fare, and tickets the booking on the traveler's explicit approval. Also cancels an existing flight booking with a preview-then-confirm flow when the cancellation capability is enabled. The user describes a trip in plain language ('book a flight from Toronto to SFO') and never needs to know a CLI command or tool name. Use when someone wants to book, find, search, or compare flights, says 'fly from X to Y', or wants to cancel a flight they booked. Not for changes, refund-status follow-ups, seat selection, hotels, cars, or multi-city trips.",
       "area": "Travel",
       "supported_surfaces": [
         "cli",
