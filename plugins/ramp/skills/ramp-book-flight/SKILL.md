@@ -67,9 +67,9 @@ plain travel language ("Let me pull up the fare and check it before booking…")
   filter on the first search or next no-cursor `job_id` read. Do not page or inspect unfiltered
   offers to find a matching airline or fare; filters re-read the cached job without a provider
   search.
-- `wait_for_results` — **CLI:** always `true` (blocks until results are ready). **MCP:** always
-  `false` (returns immediately with a `job_id` and `search_complete: false`; gather preferences
-  and poll as described in Step 3) — **except** the Step 5 return-offer read, which is always
+- `wait_for_results` — **CLI:** always `true` (blocks until results are ready). **MCP:** use
+  `false` only for the initial search kickoff, then use `true` on every `job_id` read so the
+  current agent turn returns the completed results. The Step 5 return-offer read is also always
   synchronous and rejects `false` on both surfaces.
 
 These stay optional — add only when the traveler asks:
@@ -232,19 +232,20 @@ Call `SearchFlights` with the above; include `cabin_class` only if the traveler 
    to finish soon; lead directly into the questions. Stop after asking and do not call
    `SearchFlights` again this turn.
 3. On the traveler's next turn, process every answer, then call `SearchFlights` again with the
-   same `job_id` and `wait_for_results=false`. Resend `include_fare_options` and every currently
+   same `job_id` and `wait_for_results=true`. This blocks until the search results are ready so
+   the current agent turn can present them. Resend `include_fare_options` and every currently
    known preference — including `cabin_class` — since neither persists on the job on its own;
    the traveler's newly given answers just add to that resent set. Omit `departure`, `arrival`,
    `departure_date`, and `return_date` — the job retains the route and dates from the first call.
    If the traveler **withdraws** a previously stated preference (e.g. "actually, airline doesn't
    matter"), pass that field name in `clear_preferences` so the job drops it; never silently omit
    a removed preference and never send a placeholder value.
-4. If that response is still incomplete, acknowledge any applied preferences without narrating
-   search status or timing, ask one more concise question about any remaining materially useful
-   preference, then stop again. Limit preference gathering to **at most two turns** of questions
-   after the kickoff; if the search is still incomplete after that, simply wait for the next user
-   turn to poll without asking more questions. Once `search_complete` is `true`, present the full
-   results as in Step 4.
+4. If the blocking read times out and the response is still incomplete, acknowledge any applied
+   preferences without narrating search status or timing, ask one more concise question about any
+   remaining materially useful preference, then stop again. Limit preference gathering to **at
+   most two turns** of questions after the kickoff; if the search is still incomplete after that,
+   simply wait for the next user turn to retry the blocking read without asking more questions.
+   Once `search_complete` is `true`, present the full results as in Step 4.
 
 If a `SEARCH_STILL_RUNNING` error includes a `job_id`, apply the same rule and resume that job
 only on a later user turn. Never sleep, back off, or present incomplete offers as final.
@@ -254,7 +255,7 @@ only on a later user turn. Never sleep, back off, or present incomplete offers a
   "job_id": "{job_id_from_initial_response}",
   "cabin_class": "ECONOMY",
   "include_fare_options": true,
-  "wait_for_results": false,
+  "wait_for_results": true,
   "rationale": "apply the traveler's cabin preference to the Toronto→SFO flight search"
 }
 ```
@@ -789,8 +790,8 @@ Call `SearchFlights` with the above.
 Re-send `include_fare_options` and the active `cabin_class` on every
 follow-up call (pagination, the cabin refinement, and the Step 5 return search); these settings
 do not persist on their own.
-MCP callers keep using `wait_for_results=false` and poll on outbound follow-up calls, but the
-Step 5 return search is always synchronous — pass `wait_for_results=true` there instead.
+MCP callers use `wait_for_results=true` on every outbound follow-up call and on the Step 5 return
+search so each call returns its completed results in the current agent turn.
 
 Present a **single cabin-grid Markdown table** — one row per flight, one column per cabin
 category — ordered by departure time (a comparison, not a ranked list). Never present this
