@@ -733,8 +733,8 @@ for themselves (`CONFIRMED`, `PENDING_APPROVAL`, `CANCELLED`). Two need care:
   `UpdateTravelerProfile` with the same traveler target to complete the profile before a new
   booking attempt.
 
-`travel booking-details` (CLI) / `GetBookingDetails` (MCP) is flag-gated by
-`OMNI_TRAVEL_BOOKING_SUPPORT_SKILL_ENABLED`. If it is not available, degrade gracefully with
+`travel booking-details` (CLI) / `GetBookingDetails` (MCP) is part of the booking
+support tools. If it is not available, degrade gracefully with
 the information from `travel bookings` / `GetBookings` rather than claiming the detailed
 lookup succeeded. When available, relay `request_status`, `current_total_amount`,
 `error_message`, and `approval.pending_approval_summary` verbatim when approval is pending.

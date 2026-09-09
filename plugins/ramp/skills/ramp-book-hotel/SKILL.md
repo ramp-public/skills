@@ -552,8 +552,8 @@ The submit response's nested `booking.status` is lowercase (`pending_approval`, 
 - `CANCELLED`: report that the request/reservation was cancelled.
 - `REJECTED`: report that the request was rejected.
 
-`travel booking-details` (CLI) / `GetBookingDetails` (MCP) is flag-gated by
-`OMNI_TRAVEL_BOOKING_SUPPORT_SKILL_ENABLED`. If it is not available, degrade gracefully to the
+`travel booking-details` (CLI) / `GetBookingDetails` (MCP) is part of the booking
+support tools. If it is not available, degrade gracefully to the
 information from `travel bookings` / `GetBookings`. When available, use `request_status`,
 `current_total_amount`, `error_message`, and `approval.pending_approval_summary`; relay the
 pending approval summary verbatim.
