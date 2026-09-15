@@ -56,12 +56,15 @@ plain travel language ("Let me pull up the fare and check it before booking…")
 - **Both surfaces present results as Markdown tables** — never as UI components, cards,
   interactive widgets, bullet lists, numbered lists, or prose. A Markdown table is the only
   acceptable presentation format for flight offers, fare comparisons, and fund displays.
-- `cabin_class` — offer **Economy**, **Premium Economy**, **Business**, **First** (API values
-  `ECONOMY`, `PREMIUM_ECONOMY`, `BUSINESS`, `FIRST`; never offer Basic Economy, though it can
-  still appear as a returned fare). Pass one value, or a list for alternatives like "Business or
-  First." **CLI:** required before the first search — ask it as part of Step 1's grouped
-  question. **MCP:** omit on the first search unless the traveler already gave a cabin; ask for
-  it after kickoff and send it on the next `job_id` read (Step 3).
+- Do not ask for cabin class or nonstop versus connecting flights on either surface.
+  State that you are looking for nonstop flights where available and the highest cabin
+  permitted for this itinerary and fare, including duration and price restrictions.
+  These are recommendation defaults, not hard filters: leave cabin and stops unset
+  unless the traveler specifies an override. Use returned policy verdicts rather than
+  assuming a cabin mentioned in the policy is permitted for every flight. Adapt the
+  default statement to any explicit cabin or stop preferences.
+- `cabin_class` — only when requested, pass `ECONOMY`, `PREMIUM_ECONOMY`, `BUSINESS`,
+  or `FIRST`, or a list for alternatives like "Business or First."
 - `include_fare_options` — always on, including pagination and the return-leg search.
 - When the traveler names an airline, cabin, or stop requirement, include the matching search
   filter on the first search or next no-cursor `job_id` read. Do not page or inspect unfiltered
@@ -132,10 +135,9 @@ ask the requester to pick the exact traveler before continuing.
 
 Use what the user gave you; infer the rest.
 
-- **CLI:** gather every required detail plus cabin and other preferences together in one grouped
-  question before searching. Never search first and ask about preferences later.
-- **MCP:** gather only the required details before searching — destination, origin, dates, trip
-  type. Cabin and other preferences wait until after the search starts (Step 3).
+- Gather only required details before searching — destination, origin, dates, trip
+  type. Do not delay either surface's search for optional preferences. On MCP, ask
+  remaining useful preference questions after the search starts (Step 3).
 
 Infer silently, then say back (don't ask):
 
@@ -147,7 +149,7 @@ Infer silently, then say back (don't ask):
 
 Say assumptions in one line as you go — *"Searching JFK → SFO, Mon Jul 6, round-trip…"*.
 
-If a required detail is still missing — plus, on CLI, cabin and other preferences — ask for all
+If a required detail is still missing, ask for all
 of it in one grouped question (selectable options, one question per item). Required:
 **destination**, **origin** (if no home airport to guess), **departure date**, **one-way vs
 round-trip** (if unclear), and **return date** (round-trip). Keep dates in the future — 14+ days
@@ -199,7 +201,7 @@ instead of silently moving the date.
 ramp travel search-flight --output json \
   --departure YYZ --arrival SFO \
   --departure_date 2026-07-01 --return_date 2026-07-08 \
-  --cabin_class ECONOMY --include_fare_options \
+  --include_fare_options \
   --wait_for_results=true \
   --rationale "search flights for the Toronto→SFO trip, Jul 1-8"
 ```
@@ -225,11 +227,10 @@ Call `SearchFlights` with the above; include `cabin_class` only if the traveler 
 1. The initial call above returns immediately with `search_complete: false` and a canonical
    `job_id` — do not present empty offers as final; the search is still running. (It may already
    return `search_complete: true` with offers; if so, skip straight to Step 4 and present them.)
-2. In that same turn, ask the 1-4 most important unresolved preferences in one grouped
-   question: cabin class (always ask when not already known), then timing, airline, nonstop,
-   fare-tier, and price-versus-schedule preferences when relevant — the same set described in
-   "Rules for every command." Never mention that a search was started, is running, or is likely
-   to finish soon; lead directly into the questions. Stop after asking and do not call
+2. In that same turn, briefly state the route, dates, and recommendation defaults from
+   "Rules for every command." Then ask the 1-4 most important unresolved preferences in
+   one grouped question: timing, airline, and price-versus-schedule preferences
+   when relevant. Do not ask for cabin, stop, or refundability preferences. Stop after asking and do not call
    `SearchFlights` again this turn.
 3. On the traveler's next turn, process every answer, then call `SearchFlights` again with the
    same `job_id` and `wait_for_results=true`. This blocks until the search results are ready so
@@ -253,12 +254,14 @@ only on a later user turn. Never sleep, back off, or present incomplete offers a
 ```json
 {
   "job_id": "{job_id_from_initial_response}",
-  "cabin_class": "ECONOMY",
   "include_fare_options": true,
   "wait_for_results": true,
-  "rationale": "apply the traveler's cabin preference to the Toronto→SFO flight search"
+  "rationale": "retrieve results for the Toronto→SFO flight search"
 }
 ```
+
+Add preference fields only for the traveler's explicit answers. For example, add
+`"cabin_class": "ECONOMY"` only if the traveler requested Economy; otherwise omit it.
 
 ### CLI synchronous search
 
@@ -366,7 +369,6 @@ MCP:
 {
   "outbound_offer_id": "{chosen_outbound_offer_id}",
   "job_id": "{job_id_from_step_3}",
-  "cabin_class": "ECONOMY",
   "include_fare_options": true,
   "wait_for_results": true,
   "rationale": "return offers for the chosen outbound, Toronto→SFO trip Jul 1-8"
@@ -374,6 +376,9 @@ MCP:
 ```
 
 Call `SearchFlights` with the above.
+
+Include `cabin_class` only when the traveler explicitly requested a cabin; otherwise
+leave it unset for return offers too.
 
 **Return-offer reads are always synchronous, on both CLI and MCP** — unlike the outbound search,
 this call rejects `wait_for_results=false`; always pass `true` and use the response directly.
