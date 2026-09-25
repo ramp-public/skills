@@ -1,7 +1,7 @@
 {
   "name": "ramp",
   "displayName": "Ramp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Connect Cursor to Ramp via MCP and drive spend analysis, approvals, transaction cleanup, and vendor workflows.",
   "author": {
     "name": "Ramp",
