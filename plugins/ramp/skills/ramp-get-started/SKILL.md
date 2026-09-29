@@ -35,7 +35,6 @@ I want to use Ramp with you. First, ask me:
 If **yes** (existing customer):
 1. Walk me through enabling the Ramp connector: the Claude Desktop connector lives at https://claude.ai/directory/61bac03c-3f98-4b3c-affb-1b99533fa82c — open it and follow the prompts to add Ramp.
 2. Confirm I can see Ramp tools in this conversation.
-3. Ask whether I want Ramp Agent Cards enabled for my business — if yes, point me to https://docs.ramp.com/developer-api/v1/agent-cards for setup instructions.
 
 If **no** (new customer):
 1. Tell me Ramp is a finance platform — corporate cards, bill pay, and expense management — and that I'll need to apply for an account.
@@ -62,7 +61,6 @@ I want to use Ramp with you. First, ask me:
 If **yes** (existing customer):
 1. Walk me through enabling the Ramp connector: the Ramp app for ChatGPT lives at https://chatgpt.com/apps/ramp/asdk_app_69250fb6281c819195b52a1556b0060c — open it and follow the prompts to authorize Ramp.
 2. Confirm I can see Ramp tools in this conversation.
-3. Ask whether I want Ramp Agent Cards enabled for my business — if yes, point me to https://docs.ramp.com/developer-api/v1/agent-cards for setup instructions.
 
 If **no** (new customer):
 1. Tell me Ramp is a finance platform — corporate cards, bill pay, and expense management — and that I'll need to apply for an account.
@@ -90,7 +88,6 @@ If **yes** (existing customer):
 1. Install the Ramp CLI if it's not already installed — run `ramp --version` first, and only if that fails, install it safely: download the installer to a private temp file (`install_sh=$(mktemp)` then `curl -fsSL -o "$install_sh" https://agents.ramp.com/install.sh`), review the script, then run it pinned to a specific release tag from https://github.com/ramp-public/ramp-cli/releases (`RAMP_VERSION=<tag> bash "$install_sh"`) — the installer downloads that versioned tarball and verifies its published SHA-256 checksum before installing anything. Never pipe the installer URL straight into `bash`, and never download it to a fixed, predictable path.
 2. Log me in: `ramp auth login` (this opens a browser; I complete sign-in there).
 3. Confirm `ramp --version` returns a version and `ramp auth status` shows me authenticated.
-4. Ask whether I want Ramp Agent Cards enabled for my business — if yes, point me to https://docs.ramp.com/developer-api/v1/agent-cards for setup instructions.
 
 If **no** (new customer):
 1. Tell me Ramp is a finance platform — corporate cards, bill pay, and expense management — and that I'll need to apply for an account.
@@ -122,7 +119,6 @@ If **yes** (existing customer):
 1. Install the Ramp CLI if it's not already installed — run `ramp --version` first, and only if that fails, install it safely: download the installer to a private temp file (`install_sh=$(mktemp)` then `curl -fsSL -o "$install_sh" https://agents.ramp.com/install.sh`), review the script, then run it pinned to a specific release tag from https://github.com/ramp-public/ramp-cli/releases (`RAMP_VERSION=<tag> bash "$install_sh"`) — the installer downloads that versioned tarball and verifies its published SHA-256 checksum before installing anything. Never pipe the installer URL straight into `bash`, and never download it to a fixed, predictable path.
 2. Log me in: `ramp auth login` (this opens a browser; I complete sign-in there).
 3. Confirm `ramp --version` returns a version and `ramp auth status` shows me authenticated.
-4. Ask whether I want Ramp Agent Cards enabled for my business — if yes, point me to https://docs.ramp.com/developer-api/v1/agent-cards for setup instructions.
 
 If **no** (new customer):
 1. Tell me Ramp is a finance platform — corporate cards, bill pay, and expense management — and that I'll need to apply for an account.
@@ -153,7 +149,6 @@ I want to use Ramp with you. First, ask me:
 If **yes** (existing customer):
 1. Walk me through enabling the Ramp connector: the Perplexity connector lives at https://www.perplexity.ai/computer/connectors?connector=ramp — open it and follow the prompts to authorize Ramp.
 2. Confirm I can see Ramp tools in this conversation.
-3. Ask whether I want Ramp Agent Cards enabled for my business — if yes, point me to https://docs.ramp.com/developer-api/v1/agent-cards for setup instructions.
 
 If **no** (new customer):
 1. Tell me Ramp is a finance platform — corporate cards, bill pay, and expense management — and that I'll need to apply for an account.

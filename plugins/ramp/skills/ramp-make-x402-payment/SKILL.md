@@ -3,19 +3,18 @@ name: ramp-make-x402-payment
 area: Agentic Commerce
 supported_surfaces: [browser, cli, mcp]
 description: >-
-  Make and verify a small x402 payment from a funded Ramp x402 wallet, using
-  Exa as the default demo merchant or an official x402 Bazaar for discovery.
-  Use when asked to test x402, pay an x402-protected API, or demonstrate a
-  Ramp x402 payment. For wallet provisioning or funding, use
+  Make and verify a supplied x402 payment from a funded Ramp x402 wallet. Use
+  when a merchant returns an x402 HTTP 402 challenge. Do not use for Agent Card
+  Checkout, Stripe MPP, bill payment, procurement, travel booking, reimbursements,
+  or account setup; route those to their dedicated skills. For wallet provisioning or funding, use
   ramp-setup-x402-wallet instead.
-compatibility: Requires a funded Ramp x402 wallet, Ramp CLI or MCP access to the x402 payment tool, Python 3, curl, jq, and network access to the merchant, Solana RPC, and Solscan.
+compatibility: Requires a funded Ramp x402 wallet, Ramp MCP access to x402 payment tools or a CLI equivalent, and an HTTP request capability for the merchant, Solana RPC, and Solscan. CLI examples additionally require Python 3, curl, and jq.
 ---
 
-# Make a test x402 payment
+# Make an x402 payment
 
 Pay one explicitly confirmed x402 challenge from the business's Ramp-managed
-Solana wallet. Use Exa Search as the default demo. Never sign first and explain
-later.
+Solana wallet. Never sign first and explain later.
 
 ## Safety rules
 
@@ -27,18 +26,41 @@ later.
 - Ramp currently supports the fixed-price `exact` scheme on Solana mainnet.
   Select the exact compatible entry advertised in the challenge; never rewrite
   the recipient, asset, fee payer, network, amount, resource, or extensions.
-- Show the user the merchant, resource, network, recipient, and human-readable
-  USDC amount, then get explicit confirmation immediately before signing.
+- Before signing, show the merchant, resource, network, recipient, and
+  human-readable USDC amount. Reuse existing authorization when it covers those
+  exact details; ask only when approval is missing or the merchant, purpose,
+  amount, wallet, or funding scope changed. When a prior authorization fixed a
+  recipient, do not reuse it if the final `payTo` changed.
 - Never expose the signed payment header in chat, logs, screenshots, or the
   final answer. Keep temporary files private and delete them after the request.
 - Every Ramp agent-tool call needs a non-empty `rationale`.
 - Generate each rationale from the user's actual request or immediately preceding
   confirmation. Keep it concise and action-specific; do not reuse a canned
   rationale sentence.
+- Before every merchant request, including caller-supplied URLs and redirects,
+  require HTTPS with no embedded credentials, allow only `GET` or `POST`, resolve
+  the hostname, and reject every loopback, private, link-local, reserved,
+  multicast, or otherwise non-public IP address. Pin the request to a validated
+  address while preserving TLS verification for the original hostname. If the
+  available HTTP capability cannot pin the validated address, do not call the
+  service. Do not follow redirects automatically; validate the new URL and ask
+  the user to reconfirm it before continuing.
 
-## 1. Verify tool access and wallet balance
+## 1. Verify payment capability and wallet balance
 
-Confirm the connected Ramp tool list includes `x402 pay`. With the CLI:
+In Ramp MCP `tools/list`, confirm `ramp_pay_with_x402` is available and use only
+the fields its live schema accepts:
+
+- `ramp_pay_with_x402` (summary: "Pay an x402 payment request from your business's
+   stablecoin balance"): accepts the exact chosen `accepted` challenge entry,
+   `resource`, optional `extensions`, and rationale; it returns
+   `payment_header_name` and private `payment_header_value` for the merchant
+   retry. If its live schema accepts `idempotency_key`, supply a fresh
+   caller-generated UUID and retain it for recovery. If the field is absent, do
+   not send it and do not retry an unknown tool outcome; stop and reconcile or
+   report the result.
+
+`ramp x402 pay` is the optional CLI equivalent. Verify it with:
 
 ```bash
 ramp tools refresh
@@ -56,8 +78,9 @@ Use the wallet address returned by `ramp-setup-x402-wallet`. If no trusted walle
 address is available in the conversation or user-provided setup record, stop and
 load that skill; do not guess or silently provision a wallet.
 
-Query the canonical Solana mainnet USDC mint through Solana JSON-RPC and sum all
-token accounts owned by the wallet:
+Use an available HTTP request capability to query the canonical Solana mainnet
+USDC mint and sum token accounts owned by the wallet. The following is an
+optional CLI implementation:
 
 ```bash
 WALLET_ADDRESS="<trusted_wallet_address>"
@@ -103,97 +126,53 @@ Display the confirmed USDC balance to the user. If the lookup fails, do not
 assume a balance. If the balance is zero or less than the quoted payment, stop
 and load `ramp-setup-x402-wallet` to add funds.
 
-## 2. Choose the service
+## 2. Fetch and validate the payment challenge
 
-Ask whether the user wants the default Exa demo or to browse other x402
-services.
-
-### Default: Exa Search
-
-Use Exa's documented x402 Search endpoint:
-
-```text
-Merchant: Exa
-Resource: https://api.exa.ai/search
-Method: POST
-Purpose: A small paid web search without an Exa API key
-```
-
-Briefly explain that Exa Search is a web search API that returns relevant web
-pages for a query, then ask what the user would like to search for. Do not
-describe the requested query as "harmless." Do not include an Exa API key or
-Authorization header, because either bypasses x402.
-
-### Other services
-
-Use the official [x402 Bazaar discovery
-layer](https://docs.x402.org/extensions/bazaar), not an arbitrary search result
-or user-generated directory. Query a Bazaar-enabled facilitator, starting with
-the endpoint documented in the official x402 buyer guide:
-
-```bash
-curl -fsS \
-  --connect-timeout 10 \
-  --max-time 30 \
-  "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources"
-```
-
-Present a short list with merchant/resource description, HTTP method, URL,
-fixed USDC price, and network. Only offer entries that advertise all of:
-
-- `scheme: exact`
-- Solana mainnet:
-  `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`
-- Canonical Solana USDC:
-  `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`
-- A positive fixed atomic `amount`
-- `extra.feePayer`
-
-Discovery is not an endorsement. Tell the user which Bazaar operator supplied
-the listing. Let the user choose; do not call a discovered paid resource yet.
-
-Before requesting any discovered URL, require HTTPS with no embedded
-credentials, allow only `GET` or `POST`, resolve the hostname, and reject every
-loopback, private, link-local, reserved, multicast, or otherwise non-public IP
-address. Pin the request to one of those validated addresses while preserving
-TLS verification for the original hostname (for example, with curl
-`--resolve <host>:443:<validated-ip>`); do not let the request perform a second
-uncontrolled DNS resolution. If the client cannot pin the validated address,
-do not call the discovered service. Repeat validation and pinning for every
-request. Do not follow redirects automatically; if the service returns a
-redirect, validate the new URL and ask the user to reconfirm it before
-continuing.
-
-## 3. Fetch and validate the payment challenge
-
-For the Exa demo, create a private temporary workspace and make an unpaid
-discovery request:
+Use the available HTTP capability to make the supplied unpaid request and retain
+its response headers and exact body as private values. The following is an
+optional CLI implementation that creates a private temporary workspace:
 
 ```bash
 WORK="$(mktemp -d)"
 chmod 700 "$WORK"
 cleanup() {
-  unset PAYMENT_SIGNATURE EXA_QUERY
+  unset PAYMENT_SIGNATURE REQUEST_BODY REQUEST_CONTENT_TYPE REQUEST_METHOD MERCHANT_URL PINNED_MERCHANT_RESOLVE
   rm -rf -- "$WORK"
 }
 trap cleanup EXIT INT TERM
 
-IFS= read -r -p "Exa search query: " EXA_QUERY
-jq -n --arg query "$EXA_QUERY" \
-  '{query: $query, numResults: 3}' > "$WORK/request.json"
-chmod 600 "$WORK/request.json"
+IFS= read -r -p "Original request method (GET or POST): " REQUEST_METHOD
+case "$REQUEST_METHOD" in
+  GET|POST) ;;
+  *) echo "Only GET and POST are supported" >&2; exit 1 ;;
+esac
+IFS= read -r -p "Validated merchant URL: " MERCHANT_URL
+IFS= read -r -p "Validated DNS pin (host:port:public IP): " PINNED_MERCHANT_RESOLVE
+IFS= read -r -p "Original Content-Type (leave empty if none): " REQUEST_CONTENT_TYPE
+IFS= read -r -p "Original request body (leave empty if none): " REQUEST_BODY
+printf '%s' "$REQUEST_BODY" > "$WORK/request.body"
+chmod 600 "$WORK/request.body"
 
+merchant_request_args=(
+  --resolve "$PINNED_MERCHANT_RESOLVE"
+  -X "$REQUEST_METHOD" "$MERCHANT_URL"
+)
+if [ -n "$REQUEST_CONTENT_TYPE" ]; then
+  merchant_request_args+=(-H "Content-Type: $REQUEST_CONTENT_TYPE")
+fi
+if [ -n "$REQUEST_BODY" ]; then
+  merchant_request_args+=(--data-binary @"$WORK/request.body")
+fi
 curl -sS -D "$WORK/discovery.headers" -o "$WORK/discovery.body" \
   --connect-timeout 10 \
   --max-time 30 \
-  -X POST "https://api.exa.ai/search" \
-  -H "Content-Type: application/json" \
-  --data-binary @"$WORK/request.json" \
+  "${merchant_request_args[@]}" \
   -w '%{http_code}\n'
 ```
 
-Require HTTP `402` and a `PAYMENT-REQUIRED` response header. Decode the header
-locally:
+Require HTTP `402` and a `PAYMENT-REQUIRED` response header. Decode its
+base64url value and retain the decoded challenge as a private value. The
+following is an optional CLI implementation:
 
 ```bash
 export WORK
@@ -226,10 +205,10 @@ one entry matching every compatibility rule above. Reject EVM/Base, testnet,
 dynamic-price, self-funded, non-USDC, or non-mainnet entries instead of
 modifying them.
 
-Persist the exact selected entry to `$WORK/accepted.json` before displaying it
-for confirmation. If multiple entries are compatible, let the user choose and
-persist that choice; do not select it again later. Require the persisted object
-to equal one entry in the challenge's `accepts` array.
+Retain the exact selected entry before displaying it for confirmation. If
+multiple entries are compatible, let the user choose and retain that choice; do
+not select it again later. Require the retained entry to equal one entry in the
+challenge's `accepts` array. The following is an optional CLI implementation:
 
 ```bash
 SELECTED_ACCEPTS_INDEX="<zero_based_index_in_accepts>"
@@ -243,7 +222,7 @@ jq -e --slurpfile accepted "$WORK/accepted.json" \
 Convert the selected atomic `amount` using USDC's 6 decimal places. Confirm the
 wallet balance covers it.
 
-## 4. Confirm the payment
+## 3. Confirm the payment
 
 Show:
 
@@ -257,24 +236,33 @@ Recipient: <payTo>
 Wallet balance before payment: <USDC balance>
 ```
 
-Ask:
+When no existing authorization covers the final challenge, ask:
 
 ```text
 Do you confirm this exact x402 payment?
 ```
 
-Do not proceed on vague approval, approval of a different amount, or approval
-given before the final challenge was fetched.
+Existing approval may cover the final challenge when the merchant, resource,
+purpose, wallet, funding scope, and amount are unchanged. If it previously fixed
+the recipient, `payTo` must also be unchanged. Otherwise do not proceed on vague
+approval or approval of a different amount.
 
-## 5. Sign with Ramp and retry the request
+## 4. Sign with Ramp and retry the request
 
-After confirmation, build the Ramp input from the exact challenge. Preserve the
+After confirming that existing authorization covers the challenge or obtaining
+missing approval, call the discovered `ramp_pay_with_x402` MCP tool. Preserve the
 selected `accepted` entry, `resource`, and top-level `extensions` without
-inventing fields:
+inventing fields. Supply only fields accepted by its live schema, including a
+concise rationale grounded in the customer's authorization. When that schema
+accepts `idempotency_key`, supply a fresh caller-generated UUID and retain it for
+this signing attempt. When it does not, do not claim one is supported; an unknown
+tool outcome must stop for reconciliation or reporting rather than a retry.
+
+The following is an optional CLI implementation for constructing the same input:
 
 ```bash
 IDEMPOTENCY_KEY="$(python3 -c 'import uuid; print(uuid.uuid4())')"
-RATIONALE="<concise payment rationale from the user's exact confirmation>"
+RATIONALE="<concise payment rationale from the customer's authorization>"
 jq --slurpfile accepted "$WORK/accepted.json" \
   --arg idempotency_key "$IDEMPOTENCY_KEY" \
   --arg rationale "$RATIONALE" '
@@ -289,8 +277,8 @@ jq --slurpfile accepted "$WORK/accepted.json" \
 chmod 600 "$WORK/ramp-payment.json"
 ```
 
-Require `accepted` to be non-null and equal to the entry shown to the user.
-Then call the Ramp MCP payment tool with that object or run:
+Require `accepted` to be non-null and equal to the entry shown to the user. For
+a CLI client, run:
 
 ```bash
 ramp x402 pay \
@@ -299,16 +287,19 @@ ramp x402 pay \
 chmod 600 "$WORK/ramp-payment-result.json"
 ```
 
-`ramp general pay` is not an x402 payment command. Use `ramp x402 pay` and keep
-the generated `idempotency_key` with this exact signing attempt; do not reuse it
-for a fresh challenge.
+For CLI clients, `ramp general pay` is not an x402 payment command; use
+`ramp x402 pay`. Keep the generated `idempotency_key` with this exact signing
+attempt. If CLI signing has an unknown result before merchant submission,
+recover only this exact request with the same key. Do not reuse it for a fresh
+challenge. For MCP, retry an unknown signing outcome only when its live schema
+accepted the retained caller-supplied retry identity.
 
 Require the result's `payment_header_name` to equal `PAYMENT-SIGNATURE`
-case-insensitively. Keep `payment_header_value` private. Retry the exact same
-merchant URL, method, and body with that header. Do not change the request after
-signing.
+case-insensitively. Keep `payment_header_value` private. Use the HTTP request
+capability to retry the exact same merchant URL, method, and body with that
+header. Do not change the request after signing.
 
-For Exa, retry the original search and capture the settlement header:
+For a CLI client, this is an optional retry implementation:
 
 ```bash
 PAYMENT_SIGNATURE="$(
@@ -322,18 +313,18 @@ fi
 curl -sS -D "$WORK/paid.headers" -o "$WORK/paid.body" \
   --connect-timeout 10 \
   --max-time 30 \
-  -X POST "https://api.exa.ai/search" \
-  -H "Content-Type: application/json" \
   -H "PAYMENT-SIGNATURE: $PAYMENT_SIGNATURE" \
-  --data-binary @"$WORK/request.json" \
+  "${merchant_request_args[@]}" \
   -w '%{http_code}\n'
 unset PAYMENT_SIGNATURE
 ```
 
-Require HTTP `200`. A failed retry is not permission to sign another payment:
-show the error and ask before fetching a fresh challenge or retrying.
+Require HTTP `200`. If merchant submission times out or its result is unknown,
+reconcile that exact request before signing again, changing keys, or switching
+methods. A clear failed retry is not permission to sign another payment: show
+the error and ask before fetching a fresh challenge or retrying.
 
-## 6. Verify settlement and provide Solscan
+## 5. Verify settlement and provide Solscan
 
 Decode the `PAYMENT-RESPONSE` header locally using the same base64url procedure
 as the challenge. Require a successful settlement result and extract its
@@ -350,8 +341,8 @@ Resource: <resource URL>
 Solscan: https://solscan.io/tx/<transaction>
 ```
 
-For Exa, also summarize the returned search results. Delete the private
-temporary workspace after extracting the receipt:
+Summarize the returned merchant result. Delete the private temporary workspace
+after extracting the receipt:
 
 ```bash
 cleanup
