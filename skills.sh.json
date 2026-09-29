@@ -8,6 +8,7 @@
       "skills": [
         "ramp-agentic-purchase",
         "ramp-make-x402-payment",
+        "ramp-mpp-purchase",
         "ramp-setup-x402-wallet"
       ]
     },

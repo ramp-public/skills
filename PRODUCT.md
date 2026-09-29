@@ -27,7 +27,7 @@ Tool contracts (parameters, semantics) are identical on both; each operation is 
 | Accounting | Coding hygiene, missing items, ERP sync readiness | tracking category, sync run, missing items | `ramp-complete-expenses` *(close-books coming)* |
 | Vendor Management | Vendors (payees), agreements/contracts, vendor documents | vendor, agreement/contract, vendor document | `ramp-manage-vendors` |
 | Reimbursements | Out-of-pocket expense reimbursement | reimbursement, receipt | `ramp-submit-reimbursement` |
-| Agentic commerce | Agent cards, browser checkout, x402 wallets, programmable USDC payments | agent card fund, payment token, x402 wallet, x402 payment | `ramp-agentic-purchase`, `ramp-setup-x402-wallet`, `ramp-make-x402-payment` |
+| Agentic commerce | Agent Card Checkout (browser checkout), Stripe MPP, x402 wallets, programmable USDC payments | agent card fund, payment credential, x402 wallet, x402 payment | Agent Card Checkout (`ramp-agentic-purchase`), `ramp-mpp-purchase`, `ramp-setup-x402-wallet`, `ramp-make-x402-payment` |
 
 ### Entity disambiguation
 
@@ -52,9 +52,10 @@ Tool contracts (parameters, semantics) are identical on both; each operation is 
 | Submit or track a purchase request | `ramp-submit-procurement-request`, `ramp-manage-procurement` |
 | Submit an out-of-pocket expense | `ramp-submit-reimbursement` |
 | Upload vendor documents (W-9s, contracts, COIs) | `ramp-manage-vendors` |
-| Make a purchase with an agent card | `ramp-agentic-purchase` |
+| Make an Agent Card Checkout purchase in a browser | Agent Card Checkout (`ramp-agentic-purchase`) |
+| Make a Stripe MPP purchase from a merchant challenge | `ramp-mpp-purchase` |
 | Set up or fund a Ramp x402 wallet | `ramp-setup-x402-wallet` |
-| Make or test an x402 payment | `ramp-make-x402-payment` |
+| Make an x402 payment from a merchant 402 challenge | `ramp-make-x402-payment` |
 | Apply to Ramp / incorporate a company | `ramp-apply-for-account`, `ramp-incorporate` |
 | Set up their agent for Ramp from scratch | `ramp-get-started` |
 | Create, connect, or verify a standalone agent | `ramp-onboard-standalone-agent` |

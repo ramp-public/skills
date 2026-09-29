@@ -1,10 +1,25 @@
-# Browser Checkout Reference
+# Agent Card Checkout — Browser Checkout Reference
 
-Supporting reference for the `ramp-agentic-purchase` skill: how to drive Google Chrome for merchant checkout via `playwright-cli` (pw). This content previously shipped as the standalone ramp-browser-automation skill and is now bundled here — it is not a standalone skill; use it only as part of an agent card purchase flow.
+Supporting reference for Agent Card Checkout (`ramp-agentic-purchase`): how to drive a
+merchant checkout. Use the host's native browser capability when it is available;
+this `playwright-cli` (`pw`) material is an optional fallback, not a requirement.
+This content previously shipped as the standalone ramp-browser-automation skill
+and is now bundled here — it is not a standalone skill; use it only as part of an
+Agent Card Checkout flow.
 
-Chrome is automated via `playwright-cli` (pw). A persistent Chrome profile at `~/.pw-agent/.playwright-profile/` lets logins and cookies survive across sessions. **Persisting authenticated state is opt-in**: tell the user that logins performed in this browser are saved for future sessions and get their explicit consent before relying on that; for tasks that don't need saved logins, use an isolated numbered/named session (see [Multi-session support](#multi-session-support)) instead of the shared profile.
+When using the fallback, Chrome is automated via `playwright-cli` (pw). A
+persistent Chrome profile at `~/.pw-agent/.playwright-profile/` lets logins and
+cookies survive across sessions. **Persisting authenticated state is opt-in**:
+tell the user that logins performed in this browser are saved for future sessions
+and get their explicit consent before relying on that; for tasks that don't need
+saved logins, use an isolated numbered/named session (see [Multi-session
+support](#multi-session-support)) instead of the shared profile.
 
-## Prerequisites
+## Optional playwright-cli fallback
+
+Use this section only when the host has no suitable native browser capability.
+
+### Prerequisites
 
 - Node.js installed
 - `playwright-cli` installed at a pinned version — do not install whatever npm currently serves next to a profile that may hold authenticated cookies: `npm install -g @playwright/cli@0.1.0` (bump the pin deliberately, reviewing the release first)
@@ -14,7 +29,7 @@ Chrome is automated via `playwright-cli` (pw). A persistent Chrome profile at `~
   export PATH="$(npm root -g)/../bin:$PATH"
   ```
 
-## Setup
+### Setup
 
 `~/.pw-agent/` is the runtime home. It holds the `pw` launcher script and persistent Chrome state.
 
@@ -46,7 +61,7 @@ Chrome is automated via `playwright-cli` (pw). A persistent Chrome profile at `~
 
 **Never delete `~/.pw-agent/.playwright-profile/` on your own initiative** — it contains saved logins and cookies, and re-setup should only recreate the launcher script and `mkdir -p` missing directories. If the user asks to clear saved logins or revoke stored authenticated state, deleting that directory is how to do it.
 
-## Usage
+### Usage
 
 All commands run from `~/.pw-agent/`:
 
@@ -283,9 +298,9 @@ Some checkout widgets use multi-step wizards where the Stripe iframe is destroye
 
 ## Best practices
 
-- Don't stop to narrate intermediate states — keep clicking through auth flows and loading screens until you hit an actual blocker
+- Do not repeat a payment submit when its outcome is unclear. Inspect the merchant's payment status first; use the purchase reference's reconciliation rules.
 - Try the action before assuming it won't work
-- Busywait with exponential backoff for page loads and async content
+- Wait for ordinary page loads and async content without repeating a state-changing action
 - After a browser session, summarize actions in shorthand:
   `open <url>` -> `click e42` -> `fill e15 "query"` -> `press Enter`
 - Run `date` at session start to know current date/time for interpreting relative dates

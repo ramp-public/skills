@@ -3,14 +3,15 @@
   "skills": [
     {
       "name": "ramp-agentic-purchase",
-      "description": "Make purchases using Ramp agent cards via browser checkout, then complete all transaction requirements (memo, tracking categories, receipt, trip). Use when asked to buy something with an agent card, make a payment using Ramp, spend from a fund, complete missing transaction items, or test the agent card payment flow. Also use when asked about agent card access, availability, or how to get started with Agentic Cards. Requires ramp CLI and a playwright-cli-driven browser (see bundled browser-checkout.md).",
+      "description": "Agent Card Checkout: make one authorized browser checkout purchase. Use when a merchant checkout accepts card details. Do not use for Stripe MPP, x402, bill payment, procurement, travel booking, reimbursements, or account setup; route those to their dedicated skills.",
       "area": "Agentic Commerce",
       "supported_surfaces": [
         "browser",
         "cli",
         "mcp"
       ],
-      "path": "skills/ramp-agentic-purchase"
+      "path": "skills/ramp-agentic-purchase",
+      "title": "Agent Card Checkout"
     },
     {
       "name": "ramp-apply-for-account",
@@ -102,7 +103,7 @@
     },
     {
       "name": "ramp-make-x402-payment",
-      "description": "Make and verify a small x402 payment from a funded Ramp x402 wallet, using Exa as the default demo merchant or an official x402 Bazaar for discovery. Use when asked to test x402, pay an x402-protected API, or demonstrate a Ramp x402 payment. For wallet provisioning or funding, use ramp-setup-x402-wallet instead.",
+      "description": "Make and verify a supplied x402 payment from a funded Ramp x402 wallet. Use when a merchant returns an x402 HTTP 402 challenge. Do not use for Agent Card Checkout, Stripe MPP, bill payment, procurement, travel booking, reimbursements, or account setup; route those to their dedicated skills. For wallet provisioning or funding, use ramp-setup-x402-wallet instead.",
       "area": "Agentic Commerce",
       "supported_surfaces": [
         "browser",
@@ -150,6 +151,16 @@
         "mcp"
       ],
       "path": "skills/ramp-manage-vendors"
+    },
+    {
+      "name": "ramp-mpp-purchase",
+      "description": "Make one authorized Stripe MPP purchase from a compatible merchant challenge. Use when a merchant returns a Stripe MPP WWW-Authenticate challenge. Do not use for Agent Card Checkout, x402, bill payment, procurement, travel booking, reimbursements, or account setup; route those to their dedicated skills.",
+      "area": "Agentic Commerce",
+      "supported_surfaces": [
+        "cli",
+        "mcp"
+      ],
+      "path": "skills/ramp-mpp-purchase"
     },
     {
       "name": "ramp-onboard-standalone-agent",
