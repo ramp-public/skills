@@ -7,7 +7,8 @@
 <p align="center">Search, access, and act on your Ramp financial data from your AI agent.</p>
 
 Connect your Ramp account to your agent to manage company finances through natural conversation.
-The plugin bundles Ramp's official agent skills with configuration for the Ramp MCP server.
+The plugin bundles Ramp's official agent skills with configuration for the Ramp MCP server and
+conforms to the [Agent Plugins v1.0.0](https://agent-plugins.org) specification.
 
 ## What you can do
 
@@ -63,10 +64,12 @@ Use the exact URL with no trailing slash.
 
 | | |
 |---|---|
+| **Portable manifest** | `plugin.json` — Agent Plugins v1.0.0 metadata; `mcp.json` — portable MCP server config |
 | **Skills** | Ramp's official agent skills, mirrored from the canonical catalog (see [Skill sync](#skill-sync)) — first sync intentionally pending |
 | **MCP server** | `ramp` — connects compatible agents to Ramp over MCP (`https://mcp.ramp.com/mcp`) |
 | **Rule** | `ramp-safety` — Cursor-only reinforcement of the skills' money-handling, write-confirmation, and pagination guidance |
 | **Command** | `/ramp-approvals` — surface and clear your pending approval queue |
+| **Native manifests** | `.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/` — client-specific metadata extending the portable manifest |
 
 ## Skill sync
 
