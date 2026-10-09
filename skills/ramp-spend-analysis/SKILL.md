@@ -14,6 +14,8 @@ description: |-
 
 ## Non-Negotiables
 
+- For totals, trends, rankings, or breakdowns, use `ramp-reporting` when reporting commands are available.
+
 - **Pass `--rationale` on every command** — it is a required field on these agent-tools (a non-empty string, max 1024 chars). With `--json`, supply it as a `"rationale"` key in the body. Omitting it returns `HTTP 422 (DEVELOPER_INVALID_SCHEMA)`, in both agent and human modes.
 - Always query both **transactions** and **bills** when investigating complete vendor spend. Card charges and bill payments are separate resources — there is no unified spend endpoint.
 - For a broad **AI, LLM, or inference spend** question, query token cost in addition to transactions and bills. Report these measures separately and never add them because they can overlap. If the user explicitly asks for card/Bill Pay or token data, query only that data source.

@@ -169,7 +169,7 @@ now, use the progress command's wait flags instead of repeatedly polling by hand
 ramp applications progress --env production --agent \
   --wait_for_phone_verification --wait_interval 15 --wait_timeout 900
 
-# After sending the person to complete Onfido / identity verification
+# After sending the person to complete identity verification
 ramp applications progress --env production --agent \
   --wait_for_identity_verification --wait_interval 15 --wait_timeout 900
 
@@ -247,7 +247,7 @@ be:
 - accepting the invite email;
 - phone verification, when progress returns it;
 - SSN entry;
-- Onfido identity verification.
+- identity verification.
 
 Everything else should be completed through the CLI when the API allows it. In
 guided mode, collect all visible non-sensitive missing facts from the current
@@ -261,7 +261,7 @@ When every API-writable/non-sensitive application field has been submitted and
 the only remaining applicant-owned actions are SSN entry and optionally phone
 verification, present the returned Ramp form link(s) together so the person can
 complete them in one browser session. If they are completing phone verification
-or Onfido now, run the matching
+or identity verification now, run the matching
 `ramp applications progress --wait_for_phone_verification` or
 `--wait_for_identity_verification` command so the agent resumes as soon as the
 required action clears. After the wait returns, continue from the returned

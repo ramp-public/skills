@@ -104,6 +104,12 @@ ramp funds list --agent --rationale "List the user's funds"
 ```
 
 **After each edit**, check the response's `missing_items`. Repeat until all required items are resolved (all `false` / empty).
+Also stop on any `validation_errors` and inspect the latest response's `state`:
+amount, currency, a nonblank merchant, and transaction date must be present, even
+when marked `required: false`. These values are not all covered by `missing_items`.
+Fill gaps from receipt evidence or user input, never guesses. If a blocker requires
+bank-account setup or another app-only action, hand off rather than trying submission.
+Do not attempt submission for a record known to be outside DRAFT.
 
 ### Step 4: Confirm with the user
 
@@ -127,12 +133,15 @@ Submit for approval?
 ramp reimbursements submit {reimbursement_uuid} --rationale "Submit the reimbursement"
 ```
 
-Response returns `reimbursement_uuid` and `error_message` (null on success).
+On success, report the returned outcome:
+- If `already_submitted` is true, say it was already submitted and is pending review;
+  do not claim this call submitted it.
+- Otherwise, if `submission_pending` is true, say the request was accepted and is still
+  processing; do not claim approval routing is complete or resubmit to force progress.
+- Otherwise, say it has been submitted for approval and they'll be notified when approved.
 
-After submitting, tell the user:
-- The reimbursement has been submitted for approval
-- Link to view it: the `reimbursement_link` from the create/edit response
-- They'll be notified when it's approved
+Include the `reimbursement_link` from the submission response, falling back to the
+create/edit response if needed.
 
 ## Editing After Rejection
 
