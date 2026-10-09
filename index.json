@@ -34,7 +34,7 @@
     },
     {
       "name": "ramp-book-flight",
-      "description": "Books flights conversationally: resolves cities to airports, searches one-way and round-trip flights, presents and compares offers, previews the fare, offers optional preference-aware seat selection before booking, and tickets the booking on the traveler's explicit approval. Also cancels an existing flight booking with a preview-then-confirm flow when the cancellation capability is enabled. The user describes a trip in plain language ('book a flight from Toronto to SFO') and never needs to know a CLI command or tool name. Use when someone wants to book, find, search, or compare flights, says 'fly from X to Y', or wants to cancel a flight they booked. Not for changes, refund-status follow-ups, seat changes on an already-booked flight, hotels, cars, or multi-city trips.",
+      "description": "Finds, compares, and books one-way or round-trip flights, including optional seats, and cancels eligible existing flight bookings after confirmation. Use for flight or airfare requests such as 'fly from Toronto to SFO'; not for multi-city travel or changing an existing booking (use ramp-modify-flight).",
       "area": "Travel",
       "supported_surfaces": [
         "cli",
@@ -44,7 +44,7 @@
     },
     {
       "name": "ramp-book-hotel",
-      "description": "Searches and books hotels conversationally: resolves the traveler, searches paginated hotel inventory, compares the selected room-rate returned for each hotel, previews the selected rate, and books only after explicit approval. Also cancels an existing hotel booking with a preview-then-confirm flow when the cancellation capability is enabled. Use when someone wants to find, compare, or book a hotel or lodging, or wants to cancel a hotel they booked. Not for flight booking, stay changes, refund-status follow-ups, or car rentals.",
+      "description": "Finds, compares, and books hotel rooms, and cancels eligible existing hotel bookings after confirmation. Use for hotel, lodging, or accommodation requests; not for changing an existing stay.",
       "area": "Travel",
       "supported_surfaces": [
         "cli",
@@ -153,6 +153,16 @@
       "path": "skills/ramp-manage-vendors"
     },
     {
+      "name": "ramp-modify-flight",
+      "description": "Changes an existing Ramp Travel flight booking: finds the exact booking, asks which leg, date, or airport should change, searches replacement flights, previews the authoritative exchange terms, and submits the change only on the traveler's explicit approval. Handles round trips and separately ticketed (split-ticket) legs one step at a time. Use when someone wants to change, move, reschedule, rebook, or swap a flight they already booked ('move my Friday flight to Saturday', 'fly back a day earlier', 'change my return to JFK'). Not for booking a new flight, cancelling a flight, or seat selection on a new booking (use ramp-book-flight), and not for hotel or car rental changes.",
+      "area": "Travel",
+      "supported_surfaces": [
+        "cli",
+        "mcp"
+      ],
+      "path": "skills/ramp-modify-flight"
+    },
+    {
       "name": "ramp-mpp-purchase",
       "description": "Make one authorized Stripe MPP purchase from a compatible merchant challenge. Use when a merchant returns a Stripe MPP WWW-Authenticate challenge. Do not use for Agent Card Checkout, x402, bill payment, procurement, travel booking, reimbursements, or account setup; route those to their dedicated skills.",
       "area": "Agentic Commerce",
@@ -180,6 +190,15 @@
         "mcp"
       ],
       "path": "skills/ramp-payment-lookup"
+    },
+    {
+      "name": "ramp-reporting",
+      "description": "Answers analytical questions about business data: totals, counts, trends,\ntop vendors, period comparisons, and breakdowns by department or category.\nAlso retrieves balance sheets, income statements (P&L), and trial balances\nfrom connected ERP books.",
+      "area": "Cards and Spend",
+      "supported_surfaces": [
+        "cli"
+      ],
+      "path": "skills/ramp-reporting"
     },
     {
       "name": "ramp-run-sourcing-event",
