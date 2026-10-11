@@ -34,6 +34,7 @@
         "ramp-card-management",
         "ramp-complete-expenses",
         "ramp-complete-tasks",
+        "ramp-reporting",
         "ramp-spend-analysis",
         "ramp-spend-audit"
       ]
@@ -70,7 +71,8 @@
       "description": "Search and book business travel.",
       "skills": [
         "ramp-book-flight",
-        "ramp-book-hotel"
+        "ramp-book-hotel",
+        "ramp-modify-flight"
       ]
     },
     {
