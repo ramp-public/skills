@@ -406,7 +406,9 @@ The preview is authoritative and may differ from the rates response. Present:
 - traveler (`traveler_name_display` when the preview card provides it)
 - the selected rate's `nightly_amount` as the pre-tax nightly price; do not substitute an
   all-in nightly amount
-- payment timing from the selected rate's `payment_type` (or preview card `payment_display`)
+- payment timing from the selected rate's `payment_type` (or preview card `payment_display`); when
+  the preview's `payment_display` says Ramp will submit a credit card authorization, use it
+  verbatim and never say the traveler pays at the hotel
 - exact all-in `total_amount` from the preview; do not derive it from a nightly amount
 - `in_policy` and every `policy_violations` entry
 - `requires_approval` and each `approval_steps` entry
