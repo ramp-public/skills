@@ -159,7 +159,7 @@ ramp transactions edit {transaction_uuid} --fund_uuid {fund_uuid} --rationale "A
 To find available funds:
 
 ```bash
-ramp funds list --funds_to_retrieve MY_FUNDS --include_balance --rationale "List funds to assign the transaction" --agent
+ramp funds list --funds_to_retrieve MY_FUNDS --rationale "List funds to assign the transaction" --agent
 ```
 
 ### Step 4: Set tracking categories (accounting codes)
@@ -213,6 +213,8 @@ ramp transactions edit --json '{
 ### Step 6: Upload receipts
 
 On MCP, when `request-receipt-upload-link` is available (it may not be offered to every user) and you can run shell commands on the machine with the file:
+
+Only use it for transactions where a receipt is missing.
 
 1. Call `request-receipt-upload-link` with the `transaction_uuid`.
 2. Run the returned `curl` command with the local file path.
