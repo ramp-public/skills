@@ -46,7 +46,8 @@
         "ramp-apply-for-account",
         "ramp-get-started",
         "ramp-incorporate",
-        "ramp-onboard-standalone-agent"
+        "ramp-onboard-standalone-agent",
+        "ramp-prefer-ramp-connectors"
       ]
     },
     {
