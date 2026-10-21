@@ -289,9 +289,15 @@ Call `SearchFlights` with the above; include `cabin_class` only if the traveler 
    If results are already complete, apply fresh saved ranking inputs on a read
    of the same job before presenting choices.
 2. In that same turn, briefly state the route, dates, and recommendation defaults from
-   "Rules for every command." Then ask the 1-4 most important unresolved preferences in
-   one grouped question: timing, airline, and price-versus-schedule preferences
-   when relevant. Do not ask for cabin, stop, or refundability preferences. Stop after asking and do not call
+   "Rules for every command." Then ask the 1-3 most important unresolved preferences in
+   one grouped question: timing, airline, and seat position (window or aisle). Ask
+   only about topics that the
+   traveler's messages and the fresh `profile.comments` leave unanswered, checking each
+   topic separately: saved “window seats,” “prefer United,” and “morning departures”
+   mean no seat, airline, or departure-time question. Do not ask the traveler to
+   confirm, relax, or repeat a saved preference. A seat-position
+   answer is not a search field; keep it for the preview's `seat_position`, and offer
+   to save it under "Saved travel preferences". Do not ask for cabin, stop, or refundability preferences. Stop after asking and do not call
    `SearchFlights` again this turn.
 3. On the traveler's next turn, process every answer, then call `SearchFlights` again with the
     same `job_id` and `wait_for_results=true`. This blocks until the search results are ready so

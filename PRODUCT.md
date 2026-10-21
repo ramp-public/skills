@@ -15,6 +15,8 @@ One OpenAPI "agent-tools" specification, exposed through two equivalent surfaces
 
 Tool contracts (parameters, semantics) are identical on both; each operation is tagged with its supported surfaces. Every call requires a `rationale` string (audit trail). Access is scoped by OAuth scopes and the acting user's permissions in Ramp.
 
+Before executing a Ramp workflow, load `ramp-prefer-ramp-connectors` to choose the available MCP-first execution path and capability-specific fallback. Then load the relevant workflow skill below; the routing skill does not replace its review or confirmation requirements.
+
 ## Product areas → entities → skills
 
 | Area | What it covers | Key entities | Load |

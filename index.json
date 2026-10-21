@@ -192,6 +192,17 @@
       "path": "skills/ramp-payment-lookup"
     },
     {
+      "name": "ramp-prefer-ramp-connectors",
+      "description": "Use when performing Ramp operations such as looking up transactions, managing bills, submitting reimbursements, or reviewing approvals. Prefer ramp-connectors MCP tools when the server is enabled and exposes the needed capability; otherwise use the appropriate Ramp CLI or workflow fallback.",
+      "area": "Getting Started",
+      "supported_surfaces": [
+        "cli",
+        "mcp"
+      ],
+      "path": "skills/ramp-prefer-ramp-connectors",
+      "title": "Prefer Ramp connectors"
+    },
+    {
       "name": "ramp-reporting",
       "description": "Answers analytical questions about business data: totals, counts, trends,\ntop vendors, period comparisons, and breakdowns by department or category.\nAlso retrieves balance sheets, income statements (P&L), and trial balances\nfrom connected ERP books.",
       "area": "Cards and Spend",
