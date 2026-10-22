@@ -169,10 +169,13 @@ ramp incorporation industries search --q "<business description>" --agent
 
 Collect from the user:
 - **State**: where to incorporate (default: Delaware for most businesses)
-- **NAICS code**: from the industries search result
+- **Industry**: copy the chosen industries search result's `industry` label exactly.
+  Confirm the choice with the user when several labels share a `naics_code`; never
+  pick the first match. Send the label as `industry`. If also sending `naics_code`,
+  use the code from that same result; it must match the submitted application's code.
 - **3 name options**: ranked list of LLC name preferences (Ramp files the first available)
 
-The formation create request accepts only optional `state`, `naics_code`, and
+The formation create request accepts optional `state`, `industry`, `naics_code`, and
 `name_options`, plus conditional `members`. Business description, principal
 address, office phone, and other application data are not formation-create
 fields. If any of those values need to change, update the financing application
@@ -265,7 +268,7 @@ separately when needed. Do not set SSN data in environment variables.
 ```bash
 ramp incorporation submit --json '{
   "state": "<chosen_state>",
-  "naics_code": "<naics_code>",
+  "industry": "<exact industry label from search>",
   "name_options": [
     {"name": "<option_1>", "entity_type_ending": "LLC"},
     {"name": "<option_2>", "entity_type_ending": "LLC"},
@@ -412,7 +415,7 @@ ramp incorporation applicant create --agent
 # 5. Submit
 ramp incorporation submit --json '{
   "state": "DE",
-  "naics_code": "541511",
+  "industry": "Custom Computer Programming Services",
   "name_options": [
     {"name": "Acme",        "entity_type_ending": "LLC"},
     {"name": "Acme Labs",   "entity_type_ending": "LLC"},
