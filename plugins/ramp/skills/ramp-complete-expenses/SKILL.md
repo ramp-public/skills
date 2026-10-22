@@ -25,7 +25,10 @@ description: |-
 - For bulk edits or receipt sweeps, present the plan and confirm before executing.
 - Use `ramp transactions missing {uuid}` as the reliable check for whether a receipt is attached — it returns `missing_receipt: true/false` in real time. The `receipt_uuids` field in the list response can be used as a quick filter, but it may be stale (e.g., remaining null even after a successful upload+attach).
 - CLI receipt uploads must be base64-encoded; accepted types are PNG, JPEG, PDF, HEIC, and WEBP.
-- On MCP, upload from the file on disk; never retype file contents or base64. Use `request-receipt-upload-link` when it is available and you can run shell commands on the machine with the file (see Step 6). Otherwise MCP users must upload receipts through the Ramp web or mobile app, or forward them from their work email to `receipts@ramp.com`.
+- On MCP, never paste file contents or base64 into a tool call. Pick one path:
+  - Chat app that shows an upload card (e.g. claude.ai): call `open-receipt-uploader`, even if the user already attached the file in chat — chat attachments can't reach Ramp.
+  - Terminal agent with the file on disk (Claude Code, Cursor, Codex): call `request-receipt-upload-link` and run the returned `curl` (Step 6).
+  - Neither: ask the user to upload in the Ramp web or mobile app, or email it to `receipts@ramp.com`.
 - The `--user_submitted_fields` flag tracks provenance — include it to mark which fields the user explicitly provided vs agent-inferred.
 - All CLI flags use **underscores**, not hyphens (e.g., `--from_date`, `--transaction_uuid`).
 
@@ -212,15 +215,18 @@ ramp transactions edit --json '{
 
 ### Step 6: Upload receipts
 
-On MCP, when `request-receipt-upload-link` is available (it may not be offered to every user) and you can run shell commands on the machine with the file:
+Only upload for transactions where a receipt is missing.
 
-Only use it for transactions where a receipt is missing.
+On MCP, pick one path:
 
-1. Call `request-receipt-upload-link` with the `transaction_uuid`.
-2. Run the returned `curl` command with the local file path.
-3. After a `201` response, confirm with `get-transaction-missing-items` that `missing_receipt` is `false`.
+- **Chat app with an upload card** (e.g. claude.ai): call `open-receipt-uploader` with the `transaction_uuid`, even if the file is already attached in chat.
+- **Terminal agent with the file on disk** (Claude Code, Cursor, Codex): use `request-receipt-upload-link` (it may not be offered to every user):
+  1. Call `request-receipt-upload-link` with the `transaction_uuid`.
+  2. Run the returned `curl` command with the local file path.
+  3. After a `201` response, confirm with `get-transaction-missing-items` that `missing_receipt` is `false`.
 
-Each link is single use and expires shortly, so check `expires_at` in the response; request one link per file. Never paste or retype file contents or base64, and never give the URL to the user. Otherwise, direct MCP users to the Ramp web or mobile app, or ask them to forward the receipt from their work email to `receipts@ramp.com`.
+  Each link is single use and expires shortly, so check `expires_at` in the response; request one link per file. Never give the URL to the user.
+- **Neither**: ask the user to upload in the Ramp web or mobile app, or email it to `receipts@ramp.com`.
 
 For CLI callers, when the user has a receipt file and wants to attach it to a transaction:
 
@@ -415,6 +421,6 @@ Receipt uploaded and attached (receipt_uuid: def-456).
 | `--transactions_to_retrieve` is required | Always include it on `transactions list`. Use `my_transactions` for personal, `all_transactions_across_entire_business` for admin scope |
 | Searching for specific transactions | Use `--reason_memo_merchant_or_user_name_text_search "query"` (min 3 chars) |
 | Large receipt files may hit shell arg limits | CLI: for files >100KB, write base64 to a temp file and use `--json` with the content read from file. |
-| Receipt uploads from MCP | Use `request-receipt-upload-link` plus `curl` when the tool is available and you have shell access to the file. Otherwise direct users to the Ramp web/mobile app or `receipts@ramp.com`. |
+| Receipt uploads from MCP | Upload card shown: `open-receipt-uploader`. Terminal with the file on disk: `request-receipt-upload-link` + `curl`. Neither: Ramp web/mobile app or `receipts@ramp.com`. |
 | Duplicate upload risk | Re-check `ramp transactions missing {uuid}` immediately before uploading; skip when `missing_receipt` is `false`. `receipt_uuids` alone can be stale. |
 | Comment on a transaction | `ramp general comment {uuid} --ramp_object_type transaction --message "text" --rationale "Add a comment for the user"` |
