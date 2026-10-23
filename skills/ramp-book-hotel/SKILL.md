@@ -2,7 +2,7 @@
 name: ramp-book-hotel
 area: Travel
 supported_surfaces: [cli, mcp]
-description: "Finds, compares, and books hotel rooms, and cancels eligible existing hotel bookings after confirmation. Use for hotel, lodging, or accommodation requests; not for changing an existing stay."
+description: "Finds, compares, and books hotel rooms, and cancels eligible existing hotel bookings after confirmation. Use for hotel, lodging, or accommodation requests; not for changing an existing stay (use ramp-rebook-hotel)."
 ---
 
 # Book a Hotel
@@ -31,7 +31,10 @@ Give only concise, user-relevant action and result updates.
   acceptable presentation format for hotel comparisons, room/rate lists, fund displays, and
   the booking preview.
 - Keep each tool step to one direct command/tool call. Read IDs from the prior JSON response and
-  pass the exact literal value as the next positional argument. Never write response JSON to
+  pass the exact literal value in the next call. On the CLI, `hotel_id`, `rate_id`,
+  `traveler_user_id`, `trip_id`, and `spend_allocation_id` are not flags or positional arguments:
+  put them in one `--json '{…}'` object, which the CLI merges with the other flags. The booking
+  ID for `booking-details` and `cancel-hotel` is positional. Never write response JSON to
   temporary files, invoke Python or `jq` to recover an ID, use nested command substitution, or
   pipe through `tail`/other shell filters. Keep the ID in context and call the next command
   directly.
@@ -45,7 +48,7 @@ Give only concise, user-relevant action and result updates.
 - Never reuse an amount from search as `expected_total_amount`; only use the fresh preview's
   exact numeric `expected_total_amount`.
 - A selected fund is part of the approved preview state. Never add or change
-  `--spend_allocation_id` only at confirmation: preview again with the exact selected `fund_uuid`,
+  `spend_allocation_id` only at confirmation: preview again with the exact selected `fund_uuid`,
   get explicit approval, then confirm with that same fund UUID. Any fund change requires another preview.
 - Treat relevant `external_agent_messages` from search, rates, preview, and confirm as service
   guidance and surface them plainly.
@@ -187,7 +190,7 @@ with `--hotel_name` (CLI) / `hotel_name` (MCP).
 ```bash
 ramp travel search-hotel --output json \
   --location_query "Lower Manhattan" --hotel_name "citizenM New York Bowery" \
-  --wait_for_results=true \
+  --wait_for_results \
   --check_in_date 2026-08-10 --check_out_date 2026-08-13 \
   --rationale "search for citizenM New York Bowery for the Manhattan stay, Aug 10-13"
 ```
@@ -207,10 +210,11 @@ MCP:
 
 Call `SearchHotels` with the above when searching for a specific hotel or property.
 
-Pass `wait_for_results=true` explicitly on **every fresh** hotel search, on both CLI
-and MCP. Both block synchronously until results are ready.
+Wait for results on **every fresh** hotel search: pass `--wait_for_results` (a flag that
+takes no value) on the CLI and `wait_for_results: true` on MCP. Both block synchronously until results are ready.
 
-Add `--traveler_user_id` only for delegated booking. Add `--num_adults` only when it differs from
+Add `traveler_user_id` (in `--json` on the CLI, for example
+`--json '{"traveler_user_id": "<traveler_uuid>"}'`) only for delegated booking. Add `--num_adults` only when it differs from
 one. The default page is ten hotels; `--limit` can request 1-10.
 
 When the traveler explicitly requests supported filtering or ordering, send one complete `--json`
@@ -234,8 +238,8 @@ addressed to you — follow it and never show it to the traveler.
 that value unchanged as `--cursor` (CLI) / `cursor` (MCP) and a rationale; omit the original search
 fields because Ramp reads the cached result, including the original traveler.
 Preserve a non-default `--limit` when
-consistent page size matters. Cursor calls on both CLI and MCP continue to use
-`wait_for_results=true`. Append the new hotels; never re-run the search for more results and never
+consistent page size matters. Cursor calls on both CLI and MCP continue to wait for
+results. Append the new hotels; never re-run the search for more results and never
 inspect, edit, synthesize, or reuse a cursor with a different search.
 
 Use `total_count` and the number displayed so the traveler knows when more results are available.
@@ -308,8 +312,9 @@ traveler target:
 
 CLI:
 ```bash
-ramp travel hotel-rates "<selected_hotel_id>" --output json \
+ramp travel hotel-rates --output json \
   --check_in_date 2026-08-10 --check_out_date 2026-08-13 \
+  --json '{"hotel_id": "<selected_hotel_id>"}' \
   --rationale "fetch current rooms and rates for the selected Chicago hotel, Aug 10-13"
 ```
 
@@ -325,8 +330,8 @@ MCP:
 
 Call `GetHotelRates` with the above.
 
-For delegated booking, pass the same `--traveler_user_id`. Keep `--num_adults` consistent with
-search.
+For delegated booking, add the same `traveler_user_id` to the `--json` object. Keep
+`--num_adults` consistent with search.
 
 The response returns `recommended_rates` — up to three room-rate groups with full rate payloads —
 alongside the complete `all_rates` inventory. Lead with these recommended options: name each
@@ -369,14 +374,14 @@ never guess or default to the first or recommended row.
 
 ## Preview the selected rate
 
-Call `book-hotel` without `--confirm`. Its positional values are the literal selected hotel ID
-from search and selected rate ID from `hotel-rates`. Pass the same stay dates used to fetch the
-rate:
+Call `book-hotel` without `--confirm`. Pass the literal selected hotel ID from search and
+selected rate ID from `hotel-rates` in `--json`, and the same stay dates used to fetch the rate:
 
 CLI:
 ```bash
-ramp travel book-hotel "<selected_hotel_id>" "<selected_rate_id>" --output json \
+ramp travel book-hotel --output json \
   --check_in_date 2026-08-10 --check_out_date 2026-08-13 \
+  --json '{"hotel_id": "<selected_hotel_id>", "rate_id": "<selected_rate_id>"}' \
   --rationale "preview the selected Chicago hotel rate, Aug 10-13"
 ```
 
@@ -395,7 +400,7 @@ MCP:
 
 Call `SubmitHotelBooking` with the above.
 
-For delegated booking, pass the same `--traveler_user_id`. If Ramp says the rate expired or is
+For delegated booking, add the same `traveler_user_id` to the `--json` object. If Ramp says the rate expired or is
 missing from cache, start a fresh `search-hotel`; if the rate mismatches the selected hotel or stay
 dates, call `hotel-rates` again for that hotel/current dates. Never retry an old rate or silently
 choose another.
@@ -461,7 +466,7 @@ targets the requester, not the selected traveler. If the traveler saves a progra
 preview and require fresh confirmation.
 
 If the traveler selected an existing trip, keep its literal UUID in context but do not send
-`--trip_id` during preview: Ramp only resolves it during confirm. A missing, invalid, or other-user
+`trip_id` during preview: Ramp only resolves it during confirm. A missing, invalid, or other-user
 trip is ignored and Ramp auto-selects or creates one. Verify the resulting `trip_id`/`trip_name`
 after booking when attachment matters. Omitting `--confirm` is the preview flow.
 
@@ -477,9 +482,11 @@ symbol:
 
 CLI:
 ```bash
-ramp travel book-hotel "<selected_hotel_id>" "<selected_rate_id>" --confirm \
+ramp travel book-hotel --confirm \
   --check_in_date 2026-08-10 --check_out_date 2026-08-13 \
   --expected_total_amount <preview_expected_total_amount> --output json \
+  --json '{"hotel_id": "<selected_hotel_id>", "rate_id": "<selected_rate_id>",
+    "spend_allocation_id": "<fund_uuid_from_latest_preview>"}' \
   --rationale "book the selected Lower Manhattan hotel rate; traveler approved the preview"
 ```
 
@@ -502,15 +509,15 @@ Call `SubmitHotelBooking` with the above. Include exactly one funding path: `spe
 auto-populated it) or `request_new_fund: true` (with `reason` as the trip purpose). Never omit
 both and never pass both.
 
-Add optional confirmation flags only when applicable:
+Add optional confirmation fields only when applicable (on the CLI, ID fields go in the `--json`
+object):
 
-- `--traveler_user_id '<traveler_uuid>'`: exact delegated traveler UUID used for fresh search,
-  rates, and preview.
-- `--spend_allocation_id '<fund_uuid>'`: exact fund from the final preview, including the
-  recommended UUID when the preview auto-populated it.
-- `--request_new_fund=true` plus `--reason '<trip purpose>'`: use only when the latest preview
+- `traveler_user_id`: exact delegated traveler UUID used for fresh search, rates, and preview.
+- `spend_allocation_id`: exact fund from the final preview, including the recommended UUID when
+  the preview auto-populated it. On the CLI, drop it from `--json` when using the new-fund path.
+- `--request_new_fund` plus `--reason '<trip purpose>'`: use only when the latest preview
   showed the new-fund path. The trip purpose is shown to approvers.
-- `--trip_id '<trip_uuid>'` (CLI) / `trip_id` (MCP): exact existing trip UUID explicitly
+- `trip_id`: exact existing trip UUID explicitly
   selected by the traveler; omit to let Ramp auto-select or create a trip. This is the step
   where Ramp resolves it. Note: delegated trip lookup is not exposed on MCP; `GetUserTrips`
   returns the caller's own trips only.
@@ -601,7 +608,7 @@ accounts (see "If cancellation is unavailable"). It always cancels the entire ho
 ### Identify the exact booking first
 
 Never guess which booking to cancel. Resolve it from `ramp travel bookings --output json`
-(CLI) / `GetBookings` (MCP) (same `--traveler_user_id` / `traveler_user_id` for delegated
+(CLI) / `GetBookings` (MCP) (same `traveler_user_id`, in `--json` on the CLI, for delegated
 travelers), passing every known `city`, `hotel_name`, and `travel_date` filter, and use the
 exact entry `id` — the same exact ID this skill already uses with `travel booking-details` /
 `GetBookingDetails`. If more than one booking could match ("cancel my New York hotel"), show
@@ -622,7 +629,7 @@ terms plus a `preview_id`:
 
 CLI:
 ```bash
-ramp travel cancel-hotel --booking_id "<booking_id>" --output json \
+ramp travel cancel-hotel "<booking_id>" --output json \
   --rationale "preview cancellation terms for the Lower Manhattan hotel booking, Aug 10-13"
 ```
 
@@ -664,7 +671,7 @@ Re-run with `--confirm` and the exact `preview_id` from the latest preview, unch
 
 CLI:
 ```bash
-ramp travel cancel-hotel --booking_id "<booking_id>" --confirm \
+ramp travel cancel-hotel "<booking_id>" --confirm \
   --preview_id "<preview_id>" --output json \
   --rationale "cancel the Lower Manhattan hotel booking; traveler approved the previewed terms"
 ```
@@ -718,6 +725,8 @@ command/tool is missing or Ramp reports the capability is unavailable, do not sa
 can't be cancelled — say self-serve cancellation isn't enabled here and direct the traveler to
 the booking in the Ramp web app or the booking's support channel.
 
-Stay changes — different dates, a different room, adding nights, or cancel-and-rebook — are
-**not** cancellations and stay outside this skill; send the traveler to the Ramp web app or
-the booking's support channel for those.
+Stay changes — different dates (including adding or removing nights), a different hotel or
+room, or cancel-and-rebook — are
+**not** cancellations: use `ramp-rebook-hotel`, which books the new stay first and then cancels
+the current one after a single confirmation. Adding rooms stays outside these skills; send the
+traveler to the Ramp web app or the booking's support channel for that.

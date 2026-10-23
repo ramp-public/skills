@@ -73,7 +73,8 @@
       "skills": [
         "ramp-book-flight",
         "ramp-book-hotel",
-        "ramp-modify-flight"
+        "ramp-modify-flight",
+        "ramp-rebook-hotel"
       ]
     },
     {

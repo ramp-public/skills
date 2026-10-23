@@ -24,7 +24,7 @@ Before executing a Ramp workflow, load `ramp-prefer-ramp-connectors` to choose t
 | Cards & Spend | Corporate cards, transactions, attention-feed tasks, funds (spend allocations), receipts, memos, coding | task, card, transaction, fund, receipt, tracking category, merchant | `ramp-complete-tasks`, `ramp-complete-expenses`, `ramp-spend-analysis`, `ramp-spend-audit`, `ramp-card-management`, `ramp-approval-dashboard` |
 | Bill Pay | Vendor bills/invoices, payment status, approvals, recurring bills | bill, draft bill, recurring bill, payment, vendor (payee) | `ramp-manage-bills`, `ramp-payment-lookup`, `ramp-approval-dashboard` |
 | Procurement | Purchase requests, purchase orders, request approvals, sourcing events (RFP/RFI/RFQ) | unified request, purchase order, sourcing event, RFX | `ramp-submit-procurement-request`, `ramp-manage-procurement`, `ramp-run-sourcing-event`, `ramp-manage-sourcing` |
-| Travel | Flight and hotel search/booking under company policy, including travel approvals | trip, booking, booking request, policy | `ramp-book-flight`, `ramp-modify-flight`, `ramp-book-hotel`, `ramp-approval-dashboard` |
+| Travel | Flight and hotel search/booking under company policy, including travel approvals | trip, booking, booking request, policy | `ramp-book-flight`, `ramp-modify-flight`, `ramp-book-hotel`, `ramp-rebook-hotel`, `ramp-approval-dashboard` |
 | Banking & Treasury | Ramp checking accounts, investment/managed-portfolio balances, transfers | treasury account (checking / investment / managed portfolio), wallet transfer | *(flagship skill coming — see area folder)* |
 | Accounting | Coding hygiene, missing items, ERP sync readiness | tracking category, sync run, missing items | `ramp-complete-expenses` *(close-books coming)* |
 | Vendor Management | Vendors (payees), agreements/contracts, vendor documents | vendor, agreement/contract, vendor document | `ramp-manage-vendors` |
@@ -53,6 +53,7 @@ Before executing a Ramp workflow, load `ramp-prefer-ramp-connectors` to choose t
 | Find spend issues such as software we may be paying for twice, unused funds, high limits, or vendors paid in more than one way | `ramp-spend-audit` |
 | Book or quote travel | `ramp-book-flight`, `ramp-book-hotel` |
 | Change an existing flight booking | `ramp-modify-flight` |
+| Change an existing hotel stay (new dates, hotel, or room) | `ramp-rebook-hotel` |
 | Submit or track a purchase request | `ramp-submit-procurement-request`, `ramp-manage-procurement` |
 | Submit an out-of-pocket expense | `ramp-submit-reimbursement` |
 | Upload vendor documents (W-9s, contracts, COIs) | `ramp-manage-vendors` |

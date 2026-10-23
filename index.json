@@ -44,7 +44,7 @@
     },
     {
       "name": "ramp-book-hotel",
-      "description": "Finds, compares, and books hotel rooms, and cancels eligible existing hotel bookings after confirmation. Use for hotel, lodging, or accommodation requests; not for changing an existing stay.",
+      "description": "Finds, compares, and books hotel rooms, and cancels eligible existing hotel bookings after confirmation. Use for hotel, lodging, or accommodation requests; not for changing an existing stay (use ramp-rebook-hotel).",
       "area": "Travel",
       "supported_surfaces": [
         "cli",
@@ -201,6 +201,16 @@
       ],
       "path": "skills/ramp-prefer-ramp-connectors",
       "title": "Prefer Ramp connectors"
+    },
+    {
+      "name": "ramp-rebook-hotel",
+      "description": "Replaces an existing Ramp Travel hotel booking by cancelling it and booking a new stay (cancel and rebook): checks that the stay is eligible, finds the new hotel and room, shows the new booking together with the current booking's cancellation terms (full refund, partial refund, no refund, or a fee for pay-at-property stays), and only after one explicit yes books the new hotel first and then cancels the current one. Use when someone wants to change an existing hotel stay: new dates (including extending or shortening it), a different hotel or area, or a different room ('move my Chicago hotel to next week', 'add a night to my hotel', 'switch my hotel to one closer to the office', 'rebook my stay'). Not for booking a new stay with nothing to replace, or for only cancelling a hotel (use ramp-book-hotel), and not for flight changes (use ramp-modify-flight) or car rentals.",
+      "area": "Travel",
+      "supported_surfaces": [
+        "cli",
+        "mcp"
+      ],
+      "path": "skills/ramp-rebook-hotel"
     },
     {
       "name": "ramp-reporting",
