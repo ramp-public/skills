@@ -2,7 +2,7 @@
 name: ramp-modify-flight
 area: Travel
 supported_surfaces: [cli, mcp]
-description: "Changes an existing Ramp Travel flight booking: finds the exact booking, asks which leg, date, or airport should change, searches replacement flights, previews the authoritative exchange terms, and submits the change only on the traveler's explicit approval. Handles round trips and separately ticketed (split-ticket) legs one step at a time. Use when someone wants to change, move, reschedule, rebook, or swap a flight they already booked ('move my Friday flight to Saturday', 'fly back a day earlier', 'change my return to JFK'). Not for booking a new flight, cancelling a flight, or seat selection on a new booking (use ramp-book-flight), and not for hotel or car rental changes."
+description: "Changes an existing Ramp Travel flight booking: finds the exact booking, asks which leg, date, or airport should change, searches replacement flights, previews the authoritative exchange terms, and submits the change only on the traveler's explicit approval. Handles round trips and separately ticketed (split-ticket) legs one step at a time. Use when someone wants to change, move, reschedule, rebook, or swap a flight they already booked ('move my Friday flight to Saturday', 'fly back a day earlier', 'change my return to JFK'). Not for booking a new flight, cancelling a flight, or seat selection on a new booking (use ramp-book-flight), not for flights Ramp can only cancel and rebook for a full refund (use ramp-rebook-flight), not for hotel changes (use ramp-rebook-hotel), and not for car rental changes."
 ---
 
 # Change a Flight (modify an existing booking)
@@ -22,11 +22,13 @@ cancelling in `ramp-book-flight`.
 - **CLI:** `ramp` CLI installed and logged in (`ramp auth login`). Run where `ramp` works (or
   `uv run ramp` inside the ramp-cli repo).
 - **MCP:** Ramp MCP server connected. Tools are called by their CamelCase names
-  (`GetBookings`, `SearchFlightModifications`, `SubmitFlightModification`).
+  (`GetBookings`, `BookingModificationDetails`, `SearchFlightModifications`,
+  `SubmitFlightModification`).
 
 | Step | CLI | MCP |
 |---|---|---|
 | Find the booking | `ramp travel bookings` | `GetBookings` |
+| Check how it can be changed | `ramp travel booking-modification-details` | `BookingModificationDetails` |
 | Check eligibility and search replacement flights | `ramp travel search-flight-modifications` | `SearchFlightModifications` |
 | Preview / confirm the change | `ramp travel modify-flight` | `SubmitFlightModification` |
 
@@ -42,8 +44,12 @@ a leaf command's `--help` is the authority for its flags. IDs are positional:
   (one leg at a time).
 - ❌ Booking a new flight, cancelling a flight, or seats on a new booking — use
   `ramp-book-flight`.
-- ❌ Hotel and car rental changes, refund-status follow-ups, and adding or removing travelers —
-  point the traveler to the Ramp web app or the booking's support channel.
+- ❌ Replacing a flight that can't be exchanged in place but can be cancelled for a full refund
+  and rebooked (for example inside its airline void window) — use `ramp-rebook-flight`.
+- ❌ Hotel changes — use `ramp-rebook-hotel` when it is installed; otherwise point the traveler
+  to the Ramp web app or the booking's support channel.
+- ❌ Car rental changes, refund-status follow-ups, and adding or removing travelers — point the
+  traveler to the Ramp web app or the booking's support channel.
 
 ## Rules for every command
 
@@ -110,7 +116,43 @@ Call `GetBookings` with the above.
 - If several upcoming flights match, show up to three (route, date, airline) and ask which one
   the traveler means. If none match, say you found no upcoming flight to change.
 
-## Step 2 — ask what should change
+## Step 2 — check how the flight can be changed
+
+Before any search, ask Ramp how this booking can be changed:
+
+```bash
+ramp travel booking-modification-details "<booking_id>" --output json \
+  --rationale "check change options for the DEN→SFO Jul 9 flight"
+```
+
+MCP:
+
+```json
+{
+  "booking_id": "{booking_id}",
+  "rationale": "check change options for the DEN→SFO Jul 9 flight"
+}
+```
+
+Call `BookingModificationDetails` with the above. Ramp never offers both an in-place change and
+cancel-and-rebook for the same flight, so route on `self_serve_action.kind`:
+
+- `modify`: the flight can be changed in place. Continue with Step 3 and don't present
+  `rendered_response`.
+- `cancel_and_rebook` (for example a flight inside its airline void window): the flight can't
+  be changed in place, but Ramp may be able to replace it by booking a new flight and cancelling
+  this one. Don't promise a refund: `ramp-rebook-flight` checks the refund terms next. Switch to
+  that skill now, before searching, and carry over the booking and the change the traveler asked
+  for; don't plan or explain the order of changes yourself. If that skill isn't installed or its rebooking tools are unavailable, offer
+  the `deep_link_url` with `cta_label` as the link text instead.
+- Anything else (no `self_serve_action`, or another `kind`): the flight can't be changed here.
+  Present `rendered_response` as returned (following the `ror://` rule), share `support` only as
+  it directs, and stop. Do not search.
+- If the command or tool is missing or reports that it is unavailable, follow "If changing
+  flights is unavailable". If it fails for another reason, continue with Step 3; the search
+  also checks eligibility.
+
+## Step 3 — ask what should change
 
 Show the current itinerary (each leg's route, date, and local departure time) and ask only for
 missing change details. Once the booking and change are clear, search without another
@@ -127,7 +169,7 @@ confirmation of the current itinerary.
 Only pass a cabin, stops, airline, timing, or red-eye preference when the traveler states one
 for this change; never infer it from the booked flight.
 
-## Step 3 — search replacement flights (also checks eligibility)
+## Step 4 — search replacement flights (also checks eligibility)
 
 The search is also the eligibility check: if the flight cannot be changed here, it returns an
 error instead of options (see "If the search says the flight can't be changed" below).
@@ -211,7 +253,7 @@ yes, and confirm; then start a fresh search for the next requested leg with its 
 airports (never copy one leg's date or time window to another). Never pass
 `selected_outbound_offer_id` for a split-ticket booking.
 
-## Step 4 — preview the authoritative terms (no change yet)
+## Step 5 — preview the authoritative terms (no change yet)
 
 After the traveler picks the final option, preview it. This changes nothing and returns the
 airline's re-quoted terms plus a `preview_id`:
@@ -254,7 +296,7 @@ change?"). Stop and wait. Confirmation must be a new, explicit answer to this pr
 earlier request ("move my flight"), a standing approval, or an instruction not to ask questions
 is not confirmation.
 
-## Step 5 — confirm (only after the explicit yes)
+## Step 6 — confirm (only after the explicit yes)
 
 Re-run with `--confirm` and the exact, unchanged `preview_id` from the preview the traveler
 approved (plus `oop_reason` if the replacement is out of policy):
@@ -285,7 +327,7 @@ Call `SubmitFlightModification` with the above.
   and **nothing was submitted**. Present the new preview the same way and get a new explicit yes
   for its new `preview_id`. Never re-confirm automatically.
 
-## Step 6 — report the result
+## Step 7 — report the result
 
 For `response_type` `result`, summarize using `result.headline` and `result.message` as the
 source of truth, and share `result.web_url` once as the link to the change request (never
@@ -306,13 +348,18 @@ match it in `ramp travel bookings` — completed requests are not listed there b
 
 ## If the search says the flight can't be changed
 
-- **Not modifiable** (error `FlightModificationNotModifiable`, with `modification_eligibility`
-  or `blocked_reason`): relay its `message` in plain words. If `self_serve_action` is present,
-  offer its `deep_link_url` with `cta_label` as the link text as the next step (for example a
-  cancel-and-rebook link for a flight inside its void window), instead of leading with support.
-  Otherwise share the booking-specific `support` routing (team name, phone, PIN when given).
-  When `modification_eligibility` is `NOT_MODIFIABLE`, do not proactively suggest contacting
-  support; share `support` only if the traveler asks to speak with someone.
+- **Not modifiable** (error `FlightModificationNotModifiable`, or a message such as "This
+  flight must be cancelled and rebooked to make changes"): the CLI prints only the error's
+  `message`, so don't rely on `self_serve_action` or `modification_eligibility` being visible.
+  Never improvise a cancel-then-book or book-then-cancel plan, and never cancel or book anything
+  from this skill. If the message says the flight must be cancelled and rebooked, or the error's
+  `self_serve_action.kind` is `cancel_and_rebook`, switch to `ramp-rebook-flight` and carry over
+  the change the traveler asked for (if it isn't installed or its tools are unavailable, offer
+  the `deep_link_url` with `cta_label` from Step 2 instead). For any other not-modifiable error,
+  if Step 2 didn't already run, run it now and follow its routing; otherwise relay the `message`
+  in plain words and present Step 2's `rendered_response`. When `modification_eligibility` is
+  `NOT_MODIFIABLE`, do not proactively suggest contacting support; share `support` only if the
+  traveler asks to speak with someone.
 - **Unsupported provider** (error `FlightModificationUnsupportedProvider`, with `support`): this
   booking's provider cannot be changed here. Relay its message and support details and stop —
   do not retry the search.
@@ -350,9 +397,9 @@ through the booking's support channel.
 - Flight times in search offers and in the preview's `replacement_itinerary` are airport-local
   times with that airport's UTC offset. Present them as-is; never convert them to another time
   zone.
-- A successful search can include a `self_serve_action` to cancel and rebook (for a flight still
-  inside its airline void window). Mention it once as the response's `assistant_note`
-  describes, alongside the replacement options.
+- A flight that can't be exchanged in place but is inside its airline void window shows a
+  `cancel_and_rebook` `self_serve_action` in Step 2, and the search refuses it ("must be cancelled
+  and rebooked"). That is not a dead end: use `ramp-rebook-flight`.
 
 - If a preview reports an expired offer, explain it and ask whether to search again, then stop.
   A fresh search requires a new selection, preview, and explicit confirmation.

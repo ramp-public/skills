@@ -154,7 +154,7 @@
     },
     {
       "name": "ramp-modify-flight",
-      "description": "Changes an existing Ramp Travel flight booking: finds the exact booking, asks which leg, date, or airport should change, searches replacement flights, previews the authoritative exchange terms, and submits the change only on the traveler's explicit approval. Handles round trips and separately ticketed (split-ticket) legs one step at a time. Use when someone wants to change, move, reschedule, rebook, or swap a flight they already booked ('move my Friday flight to Saturday', 'fly back a day earlier', 'change my return to JFK'). Not for booking a new flight, cancelling a flight, or seat selection on a new booking (use ramp-book-flight), and not for hotel or car rental changes.",
+      "description": "Changes an existing Ramp Travel flight booking: finds the exact booking, asks which leg, date, or airport should change, searches replacement flights, previews the authoritative exchange terms, and submits the change only on the traveler's explicit approval. Handles round trips and separately ticketed (split-ticket) legs one step at a time. Use when someone wants to change, move, reschedule, rebook, or swap a flight they already booked ('move my Friday flight to Saturday', 'fly back a day earlier', 'change my return to JFK'). Not for booking a new flight, cancelling a flight, or seat selection on a new booking (use ramp-book-flight), not for flights Ramp can only cancel and rebook for a full refund (use ramp-rebook-flight), not for hotel changes (use ramp-rebook-hotel), and not for car rental changes.",
       "area": "Travel",
       "supported_surfaces": [
         "cli",
@@ -201,6 +201,16 @@
       ],
       "path": "skills/ramp-prefer-ramp-connectors",
       "title": "Prefer Ramp connectors"
+    },
+    {
+      "name": "ramp-rebook-flight",
+      "description": "Rebooks an existing Ramp Travel flight that can't be changed in place but can be cancelled for a full refund (for example a ticket still inside its airline void window): finds the booking, checks the refund terms, searches and previews a new one-way or round-trip flight, then on one explicit confirmation books the new flight first and cancels the current one. Use when someone wants to change, move, or rebook a flight and Ramp offers cancel-and-rebook for it ('I just booked the wrong day, rebook me for Friday'). Not for flights Ramp can change in place (use ramp-modify-flight), a plain cancellation or a brand-new booking (use ramp-book-flight), multi-city trips, partial refunds or airline credit, or hotel changes (use ramp-rebook-hotel).",
+      "area": "Travel",
+      "supported_surfaces": [
+        "cli",
+        "mcp"
+      ],
+      "path": "skills/ramp-rebook-flight"
     },
     {
       "name": "ramp-rebook-hotel",
