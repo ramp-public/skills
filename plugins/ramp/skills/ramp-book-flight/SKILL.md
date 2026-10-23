@@ -39,7 +39,8 @@ plain travel language ("Let me pull up the fare and check it before booking…")
   yes (see "Cancelling a flight booking"). Availability is per-business; degrade gracefully when
   the command is missing.
 - ❌ Changes/modifications to an existing flight booking (new date, airport, or replacement
-  flight) — use the `ramp-modify-flight` skill.
+  flight) — use the `ramp-modify-flight` skill, or `ramp-rebook-flight` for a flight Ramp can
+  only cancel and rebook for a full refund.
 - ❌ Refund-status follow-ups after a cancellation, seat changes on an already-booked flight,
   hotels, cars, and multi-city are outside this flow — point the traveler to the Ramp web app
   or the booking's support channel instead.
@@ -73,7 +74,11 @@ plain travel language ("Let me pull up the fare and check it before booking…")
   filter on the first search or next no-cursor `job_id` read. Do not page or inspect unfiltered
   offers to find a matching airline or fare; filters re-read the cached job without a provider
   search.
-- `wait_for_results` — **CLI:** always `true` (blocks until results are ready). **MCP:** use
+- On the CLI, fields without a flag of their own — `traveler_user_id`, `trip_id`,
+  `outbound_offer_id`, `flight_offer_uuid`, `flight_quote_uuid`, `spend_allocation_id`, and
+  `seat_selections` — go in `--json`, which merges with the other flags. Boolean flags are
+  switches (`--wait_for_results`, `--request_new_fund`), not `--flag=true`.
+- `wait_for_results` — **CLI:** always on (`--wait_for_results`, which blocks until results are ready). **MCP:** use
   `false` only for the initial search kickoff, then use `true` on every `job_id` read so the
   current agent turn returns the completed results. The Step 5 return-offer read is also always
   synchronous and rejects `false` on both surfaces.
@@ -120,10 +125,11 @@ Use the returned traveler user UUID as `traveler_user_id`. If more than one user
 ask the requester to pick the exact traveler before continuing.
 
 2. Preserve the same `traveler_user_id` across the whole delegated flow: profile preflight,
-   `profile-update` if needed, every `search-flight` / `SearchFlights` call (initial search,
-   resume pages, and round-trip return search), both `travel book` / `SubmitFlightBooking`
-   preview and confirm calls, and booking verification/retries. Do not switch traveler ids
-   mid-flow.
+   `profile-update` if needed, the initial `search-flight` / `SearchFlights` call, both
+   `travel book-flight` / `SubmitFlightBooking` preview and confirm calls, and booking
+   verification/retries. Later searches that pass the `job_id` (resume pages and the round-trip
+   return search) keep the job's traveler and reject `traveler_user_id`, so omit it there. Do
+   not switch traveler ids mid-flow.
 
 3. If traveler lookup fails or a target-aware call returns an authorization/empty-access result,
    respond in plain travel-helper language. Do not mention `traveler_user_id`, flags, command
@@ -243,7 +249,7 @@ YYZ/YTZ). For one specific airport, search `--location_type airport` and pass it
 
 ## Step 3 — search flights
 
-Add `--return_date` only for round-trips and `--traveler_user_id` only for delegated bookings.
+Add `--return_date` only for round-trips and `traveler_user_id` (in `--json`) only for delegated bookings.
 Pass `cabin_class`, `include_fare_options`, and `wait_for_results` per "Rules for every command."
 
 **When the traveler named a departure weekday** ("leave Sunday", "out next Friday"), also pass
@@ -261,7 +267,7 @@ ramp travel search-flight --output json \
   --departure YYZ --arrival SFO \
   --departure_date 2026-07-01 --return_date 2026-07-08 \
   --include_fare_options \
-  --wait_for_results=true \
+  --wait_for_results \
   --rationale "search flights for the Toronto→SFO trip, Jul 1-8"
 ```
 
@@ -333,7 +339,7 @@ Add preference fields only for the traveler's explicit answers. For example, add
 
 ### CLI synchronous search
 
-The CLI response (with `--wait_for_results=true`) normally contains the complete
+The CLI response (with `--wait_for_results`) normally contains the complete
 ranked set. Check `search_complete` before presenting it. If it is `false`, do not
 call search again in the same turn: explain that the search is still running and
 wait for the traveler to ask to continue. On that later turn, re-call with the
@@ -418,16 +424,15 @@ cheapest/first. Ask *"Which outbound do you want? I'll pull the matching returns
 pick."* If vague ("the morning one") and more than one fits, confirm the exact flight.
 
 The return step is a **second flight-search call** — same command, with the chosen outbound's
-`id` as `--outbound_offer_id` plus the Step 3 `job_id` (carries outbound
-context for return-policy). For delegated bookings, also pass the same `--traveler_user_id`.
-Don't pass `--departure`/`--arrival`/dates again — mixing them with `--outbound_offer_id` is
-rejected.
+`id` as `outbound_offer_id` (in `--json` on the CLI) plus the Step 3 `job_id` (carries outbound
+context for return-policy). Don't pass `--departure`/`--arrival`/dates, `trip_id`, or
+`traveler_user_id` again — the job keeps them, and mixing them with `--job_id` is rejected.
 
 ```bash
 ramp travel search-flight --output json \
-  --outbound_offer_id "<chosen_outbound_offer_id>" \
   --job_id "<job_id_from_step_3>" \
-  --include_fare_options --wait_for_results=true \
+  --json '{"outbound_offer_id": "<chosen_outbound_offer_id>"}' \
+  --include_fare_options --wait_for_results \
   --rationale "return offers for the chosen outbound, Toronto→SFO trip Jul 1-8"
 ```
 
@@ -453,7 +458,7 @@ this call rejects `wait_for_results=false`; always pass `true` and use the respo
 
 The response is `is_round_trip: true` with `recommended_offers` being the initial return legs.
 Return mode is synchronous, so its `job_id` is null; page more returns by reusing
-`--outbound_offer_id` + `--cursor`, then show the returned `offers` like Step 4. Apply the
+`outbound_offer_id` + `--cursor`, then show the returned `offers` like Step 4. Apply the
 **max 10 rows** cap. **Each return offer's
 price is the full round-trip total** — say so (*"the nonstop keeps your trip at $289; the
 1-stop return makes it $396 total"*). For policy, use the applicable nested fare verdict as
@@ -529,17 +534,19 @@ Once the profile exists, continue to the normal preview, confirmation, and verif
 
 **Which id:** one-way → the chosen offer's `id` from `search-flight` / `SearchFlights`;
 round-trip → the chosen **return** offer's `id` from Step 5 (it represents the whole
-round-trip and its both-legs total — **not** the outbound id). Pass it as the first arg
-(`ramp travel book "<id>"` on CLI). Behind it is **`flight_offer_uuid`**, so a `--json` body
-or MCP `SubmitFlightBooking` call uses key `flight_offer_uuid`, not `offer_id`.
+round-trip and its both-legs total — **not** the outbound id). Pass it as
+**`flight_offer_uuid`**, not `offer_id`: in `--json` for `ramp travel book-flight` on the CLI,
+or as a field of the MCP `SubmitFlightBooking` call.
 
 ### Phase 1 — preview (always first)
 
-Run `book` with `--action preview` — that returns the preview and books nothing.
-For delegated bookings, pass the same `--traveler_user_id` used for profile preflight/search.
+Run `book-flight` with `--action preview` — that returns the preview and books nothing.
+For delegated bookings, pass the same `traveler_user_id` (in `--json`) used for profile
+preflight/search.
 
 ```bash
-ramp travel book "<flight_offer_uuid>" --action preview --output json \
+ramp travel book-flight --action preview --output json \
+  --json '{"flight_offer_uuid": "<flight_offer_uuid>"}' \
   --rationale "preview fare for the Toronto→SFO Jul 1 trip before the traveler confirms"
 ```
 
@@ -688,19 +695,21 @@ Call `SubmitFlightBooking` with the above.
 Add `--action confirm` and pass the preview's numeric `expected_total_amount` verbatim as
 `--expected_total_amount` (with no currency symbol). This rejects the booking if the fare moved
 instead of quietly charging more. Do not copy the display-formatted `total_amount`.
-For delegated bookings, pass the same `--traveler_user_id` used in the preview.
+For delegated bookings, pass the same `traveler_user_id` (in `--json`) used in the preview.
 If seats were saved (see "Seat selection"), confirm with the same `flight_quote_uuid` in place
 of `flight_offer_uuid` and the **refreshed** preview's `expected_total_amount`.
 
 ```bash
 # Without saved seats:
-ramp travel book "<flight_offer_uuid>" --action confirm \
+ramp travel book-flight --action confirm \
   --expected_total_amount <preview_expected_total_amount> --output json \
+  --json '{"flight_offer_uuid": "<flight_offer_uuid>", "spend_allocation_id": "<fund_uuid_from_latest_preview>"}' \
   --rationale "book the Toronto→SFO Jul 1 trip; traveler approved the previewed fare"
 
 # With saved seats (use flight_quote_uuid instead of flight_offer_uuid):
-ramp travel book "<flight_quote_uuid>" --action confirm \
+ramp travel book-flight --action confirm \
   --expected_total_amount <refreshed_preview_expected_total_amount> --output json \
+  --json '{"flight_quote_uuid": "<flight_quote_uuid>", "spend_allocation_id": "<fund_uuid_from_latest_preview>"}' \
   --rationale "book the Toronto→SFO Jul 1 trip; traveler approved the previewed fare with seats"
 ```
 
@@ -731,15 +740,15 @@ Call `SubmitFlightBooking` with the above. Include exactly one funding path: `sp
 auto-populated it) or `request_new_fund: true` (with `reason` as the trip purpose). Never omit
 both and never pass both.
 
-Extra flags, only when they apply:
+Extra inputs, only when they apply:
 
-- **`--spend_allocation_id <fund_uuid>`** — use the exact fund from the latest preview, including
+- **`spend_allocation_id`** (in `--json`) — use the exact fund from the latest preview, including
   the recommended UUID when that preview auto-populated it.
-- **`--request_new_fund=true`** plus **`--reason "<trip purpose>"`** — use only when the latest
-  preview showed the new-fund path. `reason` is the trip purpose shown to approvers, not a
-  generic booking note.
+- **`--request_new_fund`** plus **`--reason "<trip purpose>"`** — use instead of
+  `spend_allocation_id`, only when the latest preview showed the new-fund path. `reason` is the
+  trip purpose shown to approvers, not a generic booking note.
 - **`--oop_reason "<justification>"`** — required for an out-of-policy quote.
-- **`--trip_id <uuid>`** — attach to an existing trip; off to auto-pick/create.
+- **`trip_id`** (in `--json`) — attach to an existing trip; omit to auto-pick/create.
 
 Confirmation requires exactly one funding path: `spend_allocation_id` or
 `request_new_fund=true`. Never omit both and never pass both. Preserve the exact funding path
@@ -783,7 +792,7 @@ with AND and are applied before the result limit. Flight-number matching ignores
 punctuation, case, and leading zeroes in the numeric portion. If `results_truncated` is true,
 add another known filter and retry rather than treating the returned entries as exhaustive.
 
-For delegated bookings, pass the same `--traveler_user_id` when verifying and on every retry;
+For delegated bookings, pass the same `traveler_user_id` (in `--json`) when verifying and on every retry;
 otherwise `travel bookings` checks the requester's bookings.
 
 Each `travel bookings` entry has a generic `id` and a `booking_request_id`. Match the retained
@@ -897,7 +906,7 @@ Use these tools when relevant; reuse results already obtained for this booking.
   false`, or when a failed booking points to missing traveler details.
 - **`travel list`** (CLI) / `GetUserTrips` (MCP) — the traveler's trips
   (`--status completed|ongoing|upcoming`, `--cursor` / `status`, `cursor`). Each has `id`,
-  `trip_name`, dates, locations. Use to find a trip `id` for `--trip_id` / `trip_id` on `book` /
+  `trip_name`, dates, locations. Use to find a trip `id` for `trip_id` on `book-flight` /
   `SubmitFlightBooking`. Note: delegated trip lookup is not exposed on MCP; `GetUserTrips`
   returns the caller's own trips only.
 - **`travel bookings`** (CLI) / `GetBookings` (MCP) — existing flight/hotel bookings
@@ -925,7 +934,7 @@ accounts (see "If cancellation is unavailable").
 ### Identify the exact booking first
 
 Never guess which booking to cancel. Resolve it from `ramp travel bookings --include_flights
---output json` (same `--traveler_user_id` for delegated travelers), passing every known `city`,
+--output json` (same `traveler_user_id`, in `--json`, for delegated travelers), passing every known `city`,
 `flight_airline`, `flight_number`, and `travel_date` filter, and use the exact entry `id` — the
 same exact ID the skill already uses with `travel booking-details`. If more than one booking
 could match ("cancel my SFO flight"), show the likely matches and ask which one; never pick by
@@ -944,7 +953,7 @@ Always call without `--confirm` first. This books/cancels nothing and returns th
 terms plus a `preview_id`:
 
 ```bash
-ramp travel cancel-flight --booking_id "<booking_id>" --output json \
+ramp travel cancel-flight "<booking_id>" --output json \
   --rationale "preview cancellation terms for the Toronto→SFO Jul 1 booking"
 ```
 
@@ -988,7 +997,7 @@ questions are not confirmation.
 Re-run with `--confirm` and the exact `preview_id` from the latest preview, unchanged:
 
 ```bash
-ramp travel cancel-flight --booking_id "<booking_id>" --confirm \
+ramp travel cancel-flight "<booking_id>" --confirm \
   --preview_id "<preview_id>" --output json \
   --rationale "cancel the Toronto→SFO Jul 1 booking; traveler approved the previewed terms"
 ```
@@ -1045,7 +1054,9 @@ made: an unsupported provider (e.g. a Priceline-fulfilled flight) or a guest boo
 an error with support routing — relay it and point the traveler there.
 
 Changes, rebooking, and date or airport modifications are **not** cancellations — use the
-`ramp-modify-flight` skill for those. Seat changes on an already-booked flight stay outside
+`ramp-modify-flight` skill for those, or `ramp-rebook-flight` when Ramp offers to cancel and
+rebook the flight for a full refund. If the traveler wants to cancel a flight only to replace
+it, use `ramp-rebook-flight` so the new flight is booked before the current one is cancelled. Seat changes on an already-booked flight stay outside
 both skills — send the traveler to the Ramp web app or the booking's support channel.
 
 ## Gotchas

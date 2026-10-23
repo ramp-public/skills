@@ -74,6 +74,7 @@
         "ramp-book-flight",
         "ramp-book-hotel",
         "ramp-modify-flight",
+        "ramp-rebook-flight",
         "ramp-rebook-hotel"
       ]
     },
