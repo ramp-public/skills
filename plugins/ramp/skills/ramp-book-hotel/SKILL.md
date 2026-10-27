@@ -30,6 +30,10 @@ Give only concise, user-relevant action and result updates.
   interactive widgets, bullet lists, numbered lists, or prose. A Markdown table is the only
   acceptable presentation format for hotel comparisons, room/rate lists, fund displays, and
   the booking preview.
+- **Every option table starts with a `#` column** — hotels, rooms/rates, and funds. Number
+  rows `1`, `2`, `3` top to bottom with no gaps, restart at `1` for each new table, and
+  invite the traveler to reply with a number (e.g. "book #2"). Keep a private `#`→`id` map
+  for the latest table; never print IDs.
 - Keep each tool step to one direct command/tool call. Read IDs from the prior JSON response and
   pass the exact literal value in the next call. On the CLI, `hotel_id`, `rate_id`,
   `traveler_user_id`, `trip_id`, and `spend_allocation_id` are not flags or positional arguments:
@@ -294,7 +298,9 @@ Populate it only from returned metadata:
 - If `rates=[]`, show `-` for price, policy, and loyalty cells and note `No current summary rate`.
   Never index the first rate unless it exists; the traveler can still select the hotel and fetch
   complete rates.
-- Keep a private display-number-to-hotel-`id` map. Never print hotel IDs unless asked.
+- **#** — the row's on-screen position (top = `1`, no gaps). Keep a private
+  display-number-to-hotel-`id` map so "show rates for #2" resolves correctly. Never print
+  hotel IDs unless asked.
 - Do not show a second room/rate table during this initial comparison. Do not show `room_name`,
   `refundability`, or `cancellation_policy` yet; reserve them for the selected-hotel details.
 
@@ -364,6 +370,7 @@ Then keep the full inventory visible: render one Markdown table row for every re
   membership is corrected.
 - Put `is_company_preferred`, `is_corporate_rate`, and useful room amenities in Notes when
   present. `has_corporate_rates` is context, not proof every rate is corporate.
+- **#** — number every rate row `1`..N top to bottom, restarting at `1` for this table.
 - Keep a private display-number-to-literal-rate-`id` map. Never use a room ID, hotel ID, or search
   summary rate ID for booking.
 - Use top-level `hotel` metadata to reconfirm the selected property. `has_corporate_rates` is
@@ -573,9 +580,10 @@ retry rather than treating the returned entries as exhaustive.
 
 For delegated booking, pass the same traveler UUID. Retain the exact `booking.booking_request_id`
 from confirmation and match it to the same `booking_request_id` in the bookings response. The
-default call includes current/upcoming hotels, flights, and cars. Each entry has a generic `id`;
-use the matching entry's exact `id` with `travel booking-details` (CLI) / `GetBookingDetails`
-(MCP) for detailed questions. Do not fuzzy-match by hotel name, dates, room type, or booking
+default call includes current/upcoming hotels, flights, and cars. Each hotel entry has a
+`booking_request_id` (unfulfilled request) or a `hotel_room_booking_id` (confirmed stay); pass the
+matching entry's typed ID (`hotel_room_booking_id` when present, otherwise `booking_request_id`)
+to `travel booking-details` (CLI) / `GetBookingDetails` (MCP) for detailed questions. Do not fuzzy-match by hotel name, dates, room type, or booking
 time. Use returned `trip_id` and `trip_name` to verify trip attachment when needed. If the
 matching request is missing from the default result, retry once with `--include_failed` (CLI) /
 `include_failed: true` (MCP); if it is still missing, report that verification could not locate
@@ -610,8 +618,8 @@ accounts (see "If cancellation is unavailable"). It always cancels the entire ho
 Never guess which booking to cancel. Resolve it from `ramp travel bookings --output json`
 (CLI) / `GetBookings` (MCP) (same `traveler_user_id`, in `--json` on the CLI, for delegated
 travelers), passing every known `city`, `hotel_name`, and `travel_date` filter, and use the
-exact entry `id` — the same exact ID this skill already uses with `travel booking-details` /
-`GetBookingDetails`. If more than one booking could match ("cancel my New York hotel"), show
+exact entry's `hotel_room_booking_id` — the same exact ID this skill already uses with
+`travel booking-details` / `GetBookingDetails`. If more than one booking could match ("cancel my New York hotel"), show
 the likely matches and ask which one; never pick by hotel name, dates, or recency on your own.
 If `results_truncated` is true, ask for another identifying detail and run a narrower lookup
 before selecting a booking. If the traveler pasted an ID that this conversation's `travel
@@ -619,24 +627,26 @@ bookings` / `GetBookings` never returned, look the booking up first instead of t
 pasted value.
 
 Cancellation applies to a fulfilled booking. For an unfulfilled request (e.g.
-`PENDING_APPROVAL`), the entry `id` is the request UUID, which this command will not find —
+`PENDING_APPROVAL`), the entry has only a `booking_request_id` and no `hotel_room_booking_id`;
+cancellation reports the request is still being fulfilled rather than cancelling it —
 direct the traveler to the request in the Ramp web app instead.
 
 ### Preview the terms (read-only)
 
 Always call without `--confirm` first. This cancels nothing and returns the authoritative
-terms plus a `preview_id`:
+terms plus a `preview_id`. On the CLI, pass the entry's `hotel_room_booking_id` as the
+positional argument:
 
 CLI:
 ```bash
-ramp travel cancel-hotel "<booking_id>" --output json \
+ramp travel cancel-hotel "<hotel_room_booking_id>" --output json \
   --rationale "preview cancellation terms for the Lower Manhattan hotel booking, Aug 10-13"
 ```
 
 MCP:
 ```json
 {
-  "booking_id": "{booking_id}",
+  "hotel_room_booking_id": "{hotel_room_booking_id}",
   "confirm": false,
   "rationale": "preview cancellation terms for the Lower Manhattan hotel booking, Aug 10-13"
 }
@@ -671,7 +681,7 @@ Re-run with `--confirm` and the exact `preview_id` from the latest preview, unch
 
 CLI:
 ```bash
-ramp travel cancel-hotel "<booking_id>" --confirm \
+ramp travel cancel-hotel "<hotel_room_booking_id>" --confirm \
   --preview_id "<preview_id>" --output json \
   --rationale "cancel the Lower Manhattan hotel booking; traveler approved the previewed terms"
 ```
@@ -679,7 +689,7 @@ ramp travel cancel-hotel "<booking_id>" --confirm \
 MCP:
 ```json
 {
-  "booking_id": "{booking_id}",
+  "hotel_room_booking_id": "{hotel_room_booking_id}",
   "confirm": true,
   "preview_id": "{preview_id}",
   "rationale": "cancel the Lower Manhattan hotel booking; traveler approved the previewed terms"

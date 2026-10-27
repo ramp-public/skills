@@ -34,7 +34,7 @@ cancelling in `ramp-book-flight`.
 
 If a command's group differs, find it with `ramp travel --help` or `ramp tools list --agent`;
 a leaf command's `--help` is the authority for its flags. IDs are positional:
-`modify-flight <booking_id> <offer_id>`.
+`modify-flight <booking_id> <offer_id>`; pass the entry's `flight_booking_id` as `<booking_id>`.
 
 ## Scope
 
@@ -105,8 +105,8 @@ Call `GetBookings` with the above.
 - Skip candidates whose `status` is `CANCELLED`. A booking's `departure_time` is its first
   leg's, so a round trip already underway can still have a future return leg to change; only
   the leg the traveler wants changed must still be upcoming.
-- A request that is still `PENDING_APPROVAL` or `PROCESSING` is not a ticketed booking yet; its
-  `id` is a request ID, which the change tools will not find. Explain that the booking must be
+- A request that is still `PENDING_APPROVAL` or `PROCESSING` is not a ticketed booking yet; it
+  has only a `booking_request_id`, which the change tools cannot change. Explain that the booking must be
   ticketed first and use `ramp travel booking-details` / `GetBookingDetails` if they want its
   status.
 - If the traveler pasted an ID this conversation's lookup never returned, look the booking up
@@ -121,7 +121,7 @@ Call `GetBookings` with the above.
 Before any search, ask Ramp how this booking can be changed:
 
 ```bash
-ramp travel booking-modification-details "<booking_id>" --output json \
+ramp travel booking-modification-details "<flight_booking_id>" --output json \
   --rationale "check change options for the DEN→SFO Jul 9 flight"
 ```
 
@@ -129,7 +129,7 @@ MCP:
 
 ```json
 {
-  "booking_id": "{booking_id}",
+  "flight_booking_id": "{flight_booking_id}",
   "rationale": "check change options for the DEN→SFO Jul 9 flight"
 }
 ```
@@ -179,7 +179,7 @@ the traveler asked to change (unchanged dates and airports are kept automaticall
 
 ```bash
 ramp travel search-flight-modifications --output json --json '{
-  "booking_id": "<booking_id>",
+  "flight_booking_id": "<flight_booking_id>",
   "slice_modifications": [{"leg_index": 0, "new_departure_date": "2026-07-10"}],
   "limit": 5,
   "rationale": "search replacements for the DEN→SFO Jul 9 flight, moving it to Jul 10"
@@ -190,7 +190,7 @@ MCP:
 
 ```json
 {
-  "booking_id": "{booking_id}",
+  "flight_booking_id": "{flight_booking_id}",
   "slice_modifications": [{"leg_index": 0, "new_departure_date": "2026-07-10"}],
   "limit": 5,
   "rationale": "search replacements for the DEN→SFO Jul 9 flight, moving it to Jul 10"
@@ -259,7 +259,7 @@ After the traveler picks the final option, preview it. This changes nothing and 
 airline's re-quoted terms plus a `preview_id`:
 
 ```bash
-ramp travel modify-flight "<booking_id>" "<offer_id>" --output json \
+ramp travel modify-flight "<flight_booking_id>" "<offer_id>" --output json \
   --rationale "preview the change of the DEN→SFO Jul 9 flight to the Jul 10 7:05 AM option"
 ```
 
@@ -267,7 +267,7 @@ MCP:
 
 ```json
 {
-  "booking_id": "{booking_id}",
+  "flight_booking_id": "{flight_booking_id}",
   "offer_id": "{offer_id}",
   "confirm": false,
   "rationale": "preview the change of the DEN→SFO Jul 9 flight to the Jul 10 7:05 AM option"
@@ -302,7 +302,7 @@ Re-run with `--confirm` and the exact, unchanged `preview_id` from the preview t
 approved (plus `oop_reason` if the replacement is out of policy):
 
 ```bash
-ramp travel modify-flight "<booking_id>" "<offer_id>" --confirm \
+ramp travel modify-flight "<flight_booking_id>" "<offer_id>" --confirm \
   --preview_id "<preview_id>" --output json \
   --rationale "change the DEN→SFO Jul 9 flight to Jul 10; traveler approved the previewed terms"
 ```
@@ -311,7 +311,7 @@ MCP:
 
 ```json
 {
-  "booking_id": "{booking_id}",
+  "flight_booking_id": "{flight_booking_id}",
   "offer_id": "{offer_id}",
   "confirm": true,
   "preview_id": "{preview_id}",
@@ -392,7 +392,7 @@ through the booking's support channel.
 
 ## Gotchas
 
-- Keep passing the `id` from `travel bookings` as `booking_id` on every call. Search, preview,
+- Keep passing the `flight_booking_id` from `travel bookings` on every call. Search, preview,
   and result responses may echo a different (parent) booking ID; do not switch to it.
 - Flight times in search offers and in the preview's `replacement_itinerary` are airport-local
   times with that airport's UTC offset. Present them as-is; never convert them to another time

@@ -59,6 +59,10 @@ plain travel language ("Let me pull up the fare and check it before booking…")
 - **Both surfaces present results as Markdown tables** — never as UI components, cards,
   interactive widgets, bullet lists, numbered lists, or prose. A Markdown table is the only
   acceptable presentation format for flight offers, fare comparisons, and fund displays.
+- **Every option table starts with a `#` column** — outbound offers, return offers, the
+  cabin grid, and funds. Number rows `1`, `2`, `3` top to bottom with no gaps, restart at
+  `1` for each new table, and invite the traveler to reply with a number (e.g. "book #2").
+  Keep a private `#`→`id` map for the latest table; never print IDs.
 - Do not ask for cabin class or nonstop versus connecting flights on either surface.
   State that you are looking for nonstop flights where available and the highest cabin
   permitted for this itinerary and fare, including duration and price restrictions.
@@ -795,9 +799,10 @@ add another known filter and retry rather than treating the returned entries as 
 For delegated bookings, pass the same `traveler_user_id` (in `--json`) when verifying and on every retry;
 otherwise `travel bookings` checks the requester's bookings.
 
-Each `travel bookings` entry has a generic `id` and a `booking_request_id`. Match the retained
-confirmation `booking_request_id` exactly, then use that matching entry's generic `id` with
-`travel booking-details` for detailed status questions. Do not fuzzy-match by route, flight number,
+Each `travel bookings` flight entry has a `booking_request_id` (unfulfilled request) or a
+`flight_booking_id` (confirmed flight). Match the retained confirmation `booking_request_id`
+exactly, then pass that matching entry's typed ID (`flight_booking_id` when present, otherwise
+`booking_request_id`) to `travel booking-details` for detailed status questions. Do not fuzzy-match by route, flight number,
 or `booked_at`. If the matching request is missing from the default result, retry once with
 `--include_failed`; if it is still missing, report that verification could not locate the submitted
 request rather than using another entry. Report the matching entry's `status`. Cancelled, rejected,
@@ -935,8 +940,8 @@ accounts (see "If cancellation is unavailable").
 
 Never guess which booking to cancel. Resolve it from `ramp travel bookings --include_flights
 --output json` (same `traveler_user_id`, in `--json`, for delegated travelers), passing every known `city`,
-`flight_airline`, `flight_number`, and `travel_date` filter, and use the exact entry `id` — the
-same exact ID the skill already uses with `travel booking-details`. If more than one booking
+`flight_airline`, `flight_number`, and `travel_date` filter, and use the exact entry's
+`flight_booking_id` — the same exact ID the skill already uses with `travel booking-details`. If more than one booking
 could match ("cancel my SFO flight"), show the likely matches and ask which one; never pick by
 route, date, or recency on your own. If `results_truncated` is true, ask for another identifying
 detail and run a narrower lookup before selecting a booking. If the traveler pasted an ID that
@@ -944,16 +949,18 @@ this conversation's `travel bookings` never returned, look the booking up first 
 trusting the pasted value.
 
 Cancellation applies to a fulfilled booking. For an unfulfilled request (e.g.
-`PENDING_APPROVAL`), the entry `id` is the request UUID, which this command will not find —
+`PENDING_APPROVAL`), the entry has only a `booking_request_id` and no `flight_booking_id`;
+cancellation reports the request is still being fulfilled rather than cancelling it —
 direct the traveler to the request in the Ramp web app instead.
 
 ### Preview the terms (read-only)
 
 Always call without `--confirm` first. This books/cancels nothing and returns the authoritative
-terms plus a `preview_id`:
+terms plus a `preview_id`. On the CLI, pass the entry's `flight_booking_id` as the positional
+argument:
 
 ```bash
-ramp travel cancel-flight "<booking_id>" --output json \
+ramp travel cancel-flight "<flight_booking_id>" --output json \
   --rationale "preview cancellation terms for the Toronto→SFO Jul 1 booking"
 ```
 
@@ -961,7 +968,7 @@ MCP:
 
 ```json
 {
-  "booking_id": "{booking_id}",
+  "flight_booking_id": "{flight_booking_id}",
   "confirm": false,
   "rationale": "preview cancellation terms for the Toronto→SFO Jul 1 booking"
 }
@@ -997,7 +1004,7 @@ questions are not confirmation.
 Re-run with `--confirm` and the exact `preview_id` from the latest preview, unchanged:
 
 ```bash
-ramp travel cancel-flight "<booking_id>" --confirm \
+ramp travel cancel-flight "<flight_booking_id>" --confirm \
   --preview_id "<preview_id>" --output json \
   --rationale "cancel the Toronto→SFO Jul 1 booking; traveler approved the previewed terms"
 ```
@@ -1006,7 +1013,7 @@ MCP:
 
 ```json
 {
-  "booking_id": "{booking_id}",
+  "flight_booking_id": "{flight_booking_id}",
   "confirm": true,
   "preview_id": "{preview_id}",
   "rationale": "cancel the Toronto→SFO Jul 1 booking; traveler approved the previewed terms"

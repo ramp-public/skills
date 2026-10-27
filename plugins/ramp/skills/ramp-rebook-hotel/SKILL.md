@@ -64,7 +64,8 @@ wants to cancel the stay, or only to book a new one, use `ramp-book-hotel`.
 
 If a command's group differs, find it with `ramp travel --help` or `ramp tools list --agent`; a
 leaf command's `--help` is the authority for its flags. On the CLI, `booking_id` is positional
-for `booking-modification-details`, `booking-details`, and `cancel-hotel`. IDs such as
+for `booking-modification-details`, `booking-details`, and `cancel-hotel`; pass the entry's
+`hotel_room_booking_id` there. IDs such as
 `hotel_id`, `rate_id`, `traveler_user_id`, `trip_id`, and `spend_allocation_id` are not flags:
 pass them in one `--json '{…}'` object, which the CLI merges with the other flags.
 
@@ -129,8 +130,9 @@ Call `GetBookings` with the above.
 - Use only the logged-in user's bookings unless the user explicitly asks about another traveler's
   stay; then pass the same `traveler_user_id` on the lookup.
 - Skip `CANCELLED` entries. A request that is still `PENDING_APPROVAL` or `PROCESSING` is not a
-  booked stay yet: its `id` is a request ID that cancellation will not find. Say the stay must be
+  booked stay yet: it has only a `booking_request_id`, which cancellation will not cancel. Say the stay must be
   booked first and stop.
+- Keep the chosen entry's `hotel_room_booking_id` for every later step.
 - If several upcoming stays match, show up to three (hotel, city, dates) and ask which one. If
   none match, say you found no upcoming hotel booking to change.
 - If the traveler pasted an ID this conversation's lookup never returned, look the booking up
@@ -142,14 +144,14 @@ Ask Ramp whether this stay can be changed:
 
 CLI:
 ```bash
-ramp travel booking-modification-details "<booking_id>" --output json \
+ramp travel booking-modification-details "<hotel_room_booking_id>" --output json \
   --rationale "check whether the Chicago hotel, Oct 5-7, can be rebooked"
 ```
 
 MCP:
 ```json
 {
-  "booking_id": "{booking_id}",
+  "hotel_room_booking_id": "{hotel_room_booking_id}",
   "rationale": "check whether the Chicago hotel, Oct 5-7, can be rebooked"
 }
 ```
@@ -172,23 +174,23 @@ Then, in parallel, preview the cancellation (read-only, cancels nothing) and rea
 
 CLI:
 ```bash
-ramp travel cancel-hotel "<booking_id>" --output json \
+ramp travel cancel-hotel "<hotel_room_booking_id>" --output json \
   --rationale "preview cancellation terms to rebook the Chicago hotel, Oct 5-7"
-ramp travel booking-details "<booking_id>" --output json \
+ramp travel booking-details "<hotel_room_booking_id>" --output json \
   --rationale "read the Chicago hotel stay, Oct 5-7, to rebook it"
 ```
 
 MCP:
 ```json
 {
-  "booking_id": "{booking_id}",
+  "hotel_room_booking_id": "{hotel_room_booking_id}",
   "confirm": false,
   "rationale": "preview cancellation terms to rebook the Chicago hotel, Oct 5-7"
 }
 ```
 
 Call `SubmitHotelCancellation` with the above, and `GetBookingDetails` with the same
-`booking_id` and a rationale. Do not present the preview yet.
+`hotel_room_booking_id` and a rationale. Do not present the preview yet.
 
 ### Eligibility checks
 
@@ -472,9 +474,11 @@ search again, and **cancel nothing**. Only report what exists:
    ```
 
    Keep only entries with the new hotel's name and exactly the new stay's check-in and
-   check-out dates, excluding the current booking. Exactly one match gives the request's `id`.
+   check-out dates, excluding the current booking. Exactly one match identifies it: use its `hotel_room_booking_id` when present (already
+   fulfilled), otherwise its `booking_request_id`.
    No match, or more than one, means its status is unreadable.
-2. **Read its status** with `ramp travel booking-details` / `GetBookingDetails` and that `id`.
+2. **Read its status** with `ramp travel booking-details` / `GetBookingDetails`, passing that ID
+   under the same field name.
 3. **Report and stop.** Whatever the status, say the current booking is unchanged, report that
    request's status as shown (or that you couldn't read it), and share the `support` from Step 2.
    Never continue to Step 8 from this path.
@@ -483,14 +487,14 @@ search again, and **cancel nothing**. Only report what exists:
 
 Cancel only after the booking confirm returned a booking result rather than an error. Call
 `ramp travel cancel-hotel` / `SubmitHotelCancellation` **once** with `--confirm` / `confirm: true`
-and the `preview_id` from the latest cancellation preview, unchanged. For `booking_id`, pass
-**exactly the same `booking_id` you passed to the cancellation preview** (the `id` from
+and the `preview_id` from the latest cancellation preview, unchanged. Pass
+**exactly the same `hotel_room_booking_id` you passed to the cancellation preview** (from
 `travel bookings`). Never use an ID that appears inside the preview or any other response, such
 as a parent booking ID or `booking_request_id`, even when it looks like the booking's ID:
 
 CLI:
 ```bash
-ramp travel cancel-hotel "<booking_id>" --confirm \
+ramp travel cancel-hotel "<hotel_room_booking_id>" --confirm \
   --preview_id "<latest_preview_id>" --output json \
   --rationale "cancel the Chicago hotel, Oct 5-7, after booking its replacement; traveler approved the previewed terms"
 ```
@@ -498,7 +502,7 @@ ramp travel cancel-hotel "<booking_id>" --confirm \
 MCP:
 ```json
 {
-  "booking_id": "{booking_id}",
+  "hotel_room_booking_id": "{hotel_room_booking_id}",
   "confirm": true,
   "preview_id": "{latest_preview_id}",
   "rationale": "cancel the Chicago hotel, Oct 5-7, after booking its replacement; traveler approved the previewed terms"
