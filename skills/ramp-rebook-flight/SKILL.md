@@ -57,7 +57,7 @@ reply above. If the traveler only wants to cancel the flight, or only to book a 
 | Find the booking | `ramp travel bookings` | `GetBookings` |
 | Check whether it can be cancelled and rebooked | `ramp travel booking-modification-details` | `BookingModificationDetails` |
 | Preview / confirm the cancellation | `ramp travel cancel-flight` | `SubmitFlightCancellation` |
-| Resolve a new airport or city | `ramp travel locations` | `GetFlightBookingLocations` |
+| Resolve a new airport or city | `ramp travel flight-locations` | `GetFlightBookingLocations` |
 | Search new flights | `ramp travel search-flight` | `SearchFlights` |
 | Preview / confirm the new booking | `ramp travel book-flight` | `SubmitFlightBooking` |
 
@@ -227,7 +227,7 @@ flight.
 - Ask what should change (dates, times, airports, airline, or cabin) only if the traveler hasn't
   said it. Keep everything else from the preview's `itinerary`: the same airports, and the same
   local calendar dates for any leg that isn't moving. Resolve "a day later" against the affected
-  leg's own date. For a newly requested city, resolve it with `travel locations` /
+  leg's own date. For a newly requested city, resolve it with `travel flight-locations` /
   `GetFlightBookingLocations` as `ramp-book-flight` Step 2 does.
 - Put any open preference questions in this same message, so there is at most one round of
   questions before the search. Ask none when the traveler said any option is fine.

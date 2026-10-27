@@ -42,7 +42,7 @@ ramp reimbursements pending --agent --limit 50 --rationale "Review reimbursement
 ramp requests pending --thoughts "Reviewing all pending requests" --page_size 50 --agent --rationale "Review pending requests"
 
 # Pending travel requests
-ramp travel pending --page_size 50 --output json --rationale "Review travel requests pending my approval"
+ramp travel request-pending --page_size 50 --output json --rationale "Review travel requests pending my approval"
 ```
 
 For MCP, call `GetPendingTravelRequests` with a non-empty `rationale`.
@@ -102,7 +102,7 @@ ramp requests get {unified_request_id} --agent --rationale "Review request detai
 
 # Travel request details are returned by the pending call. Re-run it immediately
 # before acting if the displayed result may be stale.
-ramp travel pending --page_size 50 --output json --rationale "Refresh travel requests before acting"
+ramp travel request-pending --page_size 50 --output json --rationale "Refresh travel requests before acting"
 ```
 
 ### Step 4: Execute approvals
@@ -131,11 +131,11 @@ ramp reimbursements approve {reimbursement_uuid} --action reject \
 ramp requests approve {unified_request_id} --action APPROVE --thoughts "Approved — within team budget" --rationale "Act on the request approval"
 
 # Approve a travel request
-ramp travel approve {booking_request_id} --action approve \
+ramp travel request-approve {booking_request_id} --action approve \
   --rationale "Approve the exact travel request the user selected"
 
 # Reject a travel request (reason required)
-ramp travel approve {booking_request_id} --action reject \
+ramp travel request-approve {booking_request_id} --action reject \
   --rejection_reason "Trip is outside the approved travel policy" \
   --rationale "Reject the exact travel request the user selected"
 ```
