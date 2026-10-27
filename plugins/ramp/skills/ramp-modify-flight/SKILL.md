@@ -161,7 +161,7 @@ confirmation of the current itinerary.
 - Resolve "a day later" against each affected leg's own date and say the new dates back.
   Clarify ambiguous departure versus arrival deadlines before searching.
 - Keep each leg's actual airports unless asked to change them; a return from PAE must not
-  silently become SEA. For a newly requested city, use `travel locations` /
+  silently become SEA. For a newly requested city, use `travel flight-locations` /
   `GetFlightBookingLocations` with `location_type: "airport"` and clarify which airport when
   ambiguous. Unlike new-booking searches, modifications require airport IATA codes, not metro
   `search_code` values. An explicit airport code needs no lookup.

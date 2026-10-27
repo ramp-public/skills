@@ -23,6 +23,12 @@ plain travel language ("Let me pull up the fare and check it before booking…")
 - **MCP:** Ramp MCP server connected. Tools are called by their CamelCase names
   (`SearchFlights`, `SubmitFlightBooking`, `SubmitFlightCancellation`, etc.).
 
+Discover available commands with `ramp tools list --agent`; use the selected command's
+`--help` for flags and `ramp tools schema` for named request-body schemas. For MCP, use
+the connected server's tool descriptions and input schemas. These contracts, not the
+examples below, determine how to supply arguments. If a required tool or input is
+unavailable, explain which part of the trip you cannot complete rather than guessing.
+
 ## Scope
 
 - ✅ Resolve cities to airports; search one-way and round-trip; show offers.
@@ -45,7 +51,7 @@ plain travel language ("Let me pull up the fare and check it before booking…")
   hotels, cars, and multi-city are outside this flow — point the traveler to the Ramp web app
   or the booking's support channel instead.
 
-## Rules for every command
+## Search and presentation decisions
 
 - **Always `--output json`** on every `travel search-flight` call (including the Step 5 return
   search). Parse it into a friendly table — never show raw JSON, and never pipe through
@@ -54,8 +60,6 @@ plain travel language ("Let me pull up the fare and check it before booking…")
   in every related command's rationale (route + dates, e.g. "Toronto→SFO, Jul 1-8") and keep that
   same reference through search, returns, preview, book, and verify — rationales are logged, so a
   consistent trip reference groups a trip's commands.
-- `--departure`/`--arrival` (CLI) or `departure`/`arrival` (MCP) each take **one** value: an
-  airport code (`SFO`) or a Ramp city id (`search_code` from Step 2). No lists.
 - **Both surfaces present results as Markdown tables** — never as UI components, cards,
   interactive widgets, bullet lists, numbered lists, or prose. A Markdown table is the only
   acceptable presentation format for flight offers, fare comparisons, and fund displays.
@@ -70,32 +74,25 @@ plain travel language ("Let me pull up the fare and check it before booking…")
    unless the traveler specifies a firm requirement. Use returned policy verdicts rather than
   assuming a cabin mentioned in the policy is permitted for every flight. Adapt the
   default statement to any explicit cabin or stop preferences.
-- `cabin_class` — only for a firm requirement, pass `ECONOMY`, `PREMIUM_ECONOMY`, `BUSINESS`,
-  or `FIRST`, or a list for alternatives like "Business or First." Never default it to
-  `ECONOMY`, even for estimates or comparisons; it hides in-policy higher-cabin fares.
+- Set `cabin_class` only for a firm cabin requirement, including alternatives the traveler
+  named. Never default it to Economy, even for estimates or comparisons; it hides
+  in-policy higher-cabin fares.
 - `include_fare_options` — always on, including pagination and the return-leg search.
 - When the traveler states a firm airline, cabin, or stop requirement, include the matching search
   filter on the first search or next no-cursor `job_id` read. Do not page or inspect unfiltered
   offers to find a matching airline or fare; filters re-read the cached job without a provider
   search.
-- On the CLI, fields without a flag of their own — `traveler_user_id`, `trip_id`,
-  `outbound_offer_id`, `flight_offer_uuid`, `flight_quote_uuid`, `spend_allocation_id`, and
-  `seat_selections` — go in `--json`, which merges with the other flags. Boolean flags are
-  switches (`--wait_for_results`, `--request_new_fund`), not `--flag=true`.
 - `wait_for_results` — **CLI:** always on (`--wait_for_results`, which blocks until results are ready). **MCP:** use
   `false` only for the initial search kickoff, then use `true` on every `job_id` read so the
   current agent turn returns the completed results. The Step 5 return-offer read is also always
   synchronous and rejects `false` on both surfaces.
 
-These stay optional — add only when the traveler asks:
-
-- `--limit` — off returns a default page. **Show at most 10 flights** in the results table;
-  if the response contains more, present the first 10 and tell the traveler they can ask for
-  more. Paginate with `next_cursor` (Step 3) when they do.
-- `--sort_key` — off uses `WEIGHTED_SCORE`. Other keys: `LOWEST_TOTAL_AMOUNT`,
-  `SHORTEST_DURATION`, `LEAST_NUMBER_OF_STOPS`, `EARLIEST_DEPARTURE_TIME`,
-  `LATEST_DEPARTURE_TIME`, `EARLIEST_ARRIVAL_TIME`, `LATEST_ARRIVAL_TIME`. Re-sort the
-  cached `job_id` without a cursor, rather than starting a new search.
+- **Show at most 10 flights** in the results table; if the response contains more,
+  present the first 10 and tell the traveler they can ask for more. Fetch later pages
+  only when requested (Step 3).
+- Keep the returned recommendation order unless the traveler asks for a different sort.
+  For a requested sort, re-sort the cached `job_id` without a cursor rather than starting
+  a new search; choose a supported `sort_key` from the tool contract.
 - Use `ramp travel search-flight` (CLI) or `SearchFlights` (MCP) for flight searches; check
   `ramp travel --help` if the CLI alias is unavailable.
 
@@ -106,27 +103,10 @@ omit it everywhere and book for the logged-in user.
 
 When the user asks to book for someone else:
 
-1. Resolve that traveler before profile preflight or search:
-
-```bash
-ramp users list --name_search "Taylor Smith" --page_size 5 \
-  --rationale "resolve the traveler for the Toronto→SFO trip" --output json
-```
-
-MCP:
-
-```json
-{
-  "name_search": "Taylor Smith",
-  "page_size": 5,
-  "rationale": "resolve the traveler for the Toronto→SFO trip"
-}
-```
-
-Call `GetAllReducedUsers` with the above.
-
-Use the returned traveler user UUID as `traveler_user_id`. If more than one user could match,
-ask the requester to pick the exact traveler before continuing.
+1. Resolve that traveler with `ramp users list` (CLI) / `GetAllReducedUsers` (MCP)
+   before profile preflight or search, using the name the requester supplied. Use the
+   returned traveler user UUID as `traveler_user_id`. If more than one user could match,
+   ask the requester to pick the exact traveler before continuing.
 
 2. Preserve the same `traveler_user_id` across the whole delegated flow: profile preflight,
    `profile-update` if needed, the initial `search-flight` / `SearchFlights` call, both
@@ -230,7 +210,7 @@ assumed advance-booking cutoff. Never re-ask what they told you.
 - **City/vague place** ("New York", "the Bay Area") → look it up first:
 
 ```bash
-ramp travel locations --query "New York" --location_type city --limit 5 \
+ramp travel flight-locations --query "New York" --location_type city --limit 5 \
   --rationale "resolve New York to a metro id for the user's trip" --output json
 ```
 
@@ -254,7 +234,7 @@ YYZ/YTZ). For one specific airport, search `--location_type airport` and pass it
 ## Step 3 — search flights
 
 Add `--return_date` only for round-trips and `traveler_user_id` (in `--json`) only for delegated bookings.
-Pass `cabin_class`, `include_fare_options`, and `wait_for_results` per "Rules for every command."
+Pass `cabin_class`, `include_fare_options`, and `wait_for_results` per "Search and presentation decisions."
 
 **When the traveler named a departure weekday** ("leave Sunday", "out next Friday"), also pass
 `--requested_weekday` with the lowercase day (`sunday`), if the flight-search command lists it
@@ -299,7 +279,7 @@ Call `SearchFlights` with the above; include `cabin_class` only if the traveler 
    If results are already complete, apply fresh saved ranking inputs on a read
    of the same job before presenting choices.
 2. In that same turn, briefly state the route, dates, and recommendation defaults from
-   "Rules for every command." Then ask the 1-3 most important unresolved preferences in
+   "Search and presentation decisions." Then ask the 1-3 most important unresolved preferences in
    one grouped question: timing, airline, and seat position (window or aisle). Ask
    only about topics that the
    traveler's messages and the fresh `profile.comments` leave unanswered, checking each
@@ -909,7 +889,7 @@ Use these tools when relevant; reuse results already obtained for this booking.
 - **`travel profile-update`** (CLI) / `UpdateTravelerProfile` (MCP) — saves missing traveler
   details before booking when `travel profile` / `GetTravelerProfile` returns `has_profile:
   false`, or when a failed booking points to missing traveler details.
-- **`travel list`** (CLI) / `GetUserTrips` (MCP) — the traveler's trips
+- **`travel trip-list`** (CLI) / `GetUserTrips` (MCP) — the traveler's trips
   (`--status completed|ongoing|upcoming`, `--cursor` / `status`, `cursor`). Each has `id`,
   `trip_name`, dates, locations. Use to find a trip `id` for `trip_id` on `book-flight` /
   `SubmitFlightBooking`. Note: delegated trip lookup is not exposed on MCP; `GetUserTrips`
