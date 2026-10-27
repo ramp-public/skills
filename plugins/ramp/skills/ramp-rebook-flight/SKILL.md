@@ -63,7 +63,8 @@ reply above. If the traveler only wants to cancel the flight, or only to book a 
 
 If a command's group differs, find it with `ramp travel --help` or `ramp tools list --agent`;
 a leaf command's `--help` is the authority for its flags. On the CLI, `booking_id` is positional
-on `booking-modification-details` and `cancel-flight`, and fields without a flag of their own
+on `booking-modification-details` and `cancel-flight` (pass the entry's `flight_booking_id`
+there), and fields without a flag of their own
 (`traveler_user_id`, `trip_id`, `outbound_offer_id`, `flight_offer_uuid`, `flight_quote_uuid`,
 `spend_allocation_id`) go in `--json`, which merges with the other flags.
 
@@ -132,12 +133,12 @@ Call `GetBookings` with the above.
 - Skip `CANCELLED` entries. A `PENDING_APPROVAL` or `PROCESSING` request is not a ticketed booking
   yet — say it must be ticketed first.
 - If several upcoming flights match, show up to three (route, date, airline) and ask which one.
-  Keep the chosen entry's `id` and `trip_id` for every later step.
+  Keep the chosen entry's `flight_booking_id` and `trip_id` for every later step.
 
 ## Step 2 — check that cancel-and-rebook applies
 
 ```bash
-ramp travel booking-modification-details "<booking_id>" --output json \
+ramp travel booking-modification-details "<flight_booking_id>" --output json \
   --rationale "check change options for the DEN→SFO Jul 9 flight"
 ```
 
@@ -145,7 +146,7 @@ MCP:
 
 ```json
 {
-  "booking_id": "{booking_id}",
+  "flight_booking_id": "{flight_booking_id}",
   "rationale": "check change options for the DEN→SFO Jul 9 flight"
 }
 ```
@@ -166,7 +167,7 @@ Call `BookingModificationDetails` with the above.
 ## Step 3 — preview the cancellation and check eligibility (do not present yet)
 
 ```bash
-ramp travel cancel-flight "<booking_id>" --output json \
+ramp travel cancel-flight "<flight_booking_id>" --output json \
   --rationale "preview cancellation terms to rebook the DEN→SFO Jul 9 flight"
 ```
 
@@ -174,7 +175,7 @@ MCP:
 
 ```json
 {
-  "booking_id": "{booking_id}",
+  "flight_booking_id": "{flight_booking_id}",
   "confirm": false,
   "rationale": "preview cancellation terms to rebook the DEN→SFO Jul 9 flight"
 }
@@ -301,7 +302,7 @@ ramp travel book-flight --action preview --output json \
   --json '{"flight_offer_uuid": "<flight_offer_uuid>", "traveler_user_id": "<preview_traveler_id>", "trip_id": "<trip_id_from_bookings>"}' \
   --rationale "preview the replacement for the DEN→SFO Jul 9 flight"
 
-ramp travel cancel-flight "<booking_id>" --output json \
+ramp travel cancel-flight "<flight_booking_id>" --output json \
   --rationale "refresh cancellation terms to rebook the DEN→SFO Jul 9 flight"
 ```
 
@@ -321,7 +322,7 @@ and `SubmitFlightCancellation` with:
 
 ```json
 {
-  "booking_id": "{booking_id}",
+  "flight_booking_id": "{flight_booking_id}",
   "confirm": false,
   "rationale": "refresh cancellation terms to rebook the DEN→SFO Jul 9 flight"
 }
@@ -450,7 +451,7 @@ Act on the first case that matches:
 Confirm the cancellation once, with the `preview_id` from the latest qualifying preview:
 
 ```bash
-ramp travel cancel-flight "<booking_id>" --confirm \
+ramp travel cancel-flight "<flight_booking_id>" --confirm \
   --preview_id "<preview_id>" --output json \
   --rationale "cancel the DEN→SFO Jul 9 flight after booking its replacement; traveler approved"
 ```
@@ -459,7 +460,7 @@ MCP:
 
 ```json
 {
-  "booking_id": "{booking_id}",
+  "flight_booking_id": "{flight_booking_id}",
   "confirm": true,
   "preview_id": "{preview_id}",
   "rationale": "cancel the DEN→SFO Jul 9 flight after booking its replacement; traveler approved"
@@ -530,7 +531,7 @@ the booking's support channel.
 
 ## Gotchas
 
-- Keep passing the `id` from `travel bookings` as `booking_id`. Previews and results may echo a
+- Keep passing the `flight_booking_id` from `travel bookings`. Previews and results may echo a
   different (parent) booking ID; do not switch to it.
 - The cancellation preview's `message` and `rendered_response` describe a plain cancellation.
   Never present the cancellation on its own before the new flight is chosen, and never confirm it
