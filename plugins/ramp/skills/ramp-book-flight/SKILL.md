@@ -51,6 +51,21 @@ unavailable, explain which part of the trip you cannot complete rather than gues
   hotels, cars, and multi-city are outside this flow — point the traveler to the Ramp web app
   or the booking's support channel instead.
 
+## Check booking availability first
+
+Before saying booking is available, collecting trip details, or starting a new search,
+call `GetBookingServiceStatus` (MCP) or `ramp travel status` (CLI). Check again for a
+new booking flow or a retry after a disruption; an earlier flow's result is stale.
+
+Use `flight_booking_status` and share its `message` and `note` before intake questions.
+If `is_down` is true, stop flight intake, search, and booking. Do not suggest the web
+app as a workaround for the same outage. If it is false, share any advisory and
+continue. Do not block flights because another booking type is down, invent a
+recovery time, or repeat an unchanged warning on every turn.
+
+If the check is unavailable or fails, say availability could not be verified; do not
+claim an outage or normal service. Existing search and booking restrictions still apply.
+
 ## Search and presentation decisions
 
 - **Always `--output json`** on every `travel search-flight` call (including the Step 5 return
