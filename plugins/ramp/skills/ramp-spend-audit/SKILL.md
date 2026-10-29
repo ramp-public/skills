@@ -67,11 +67,12 @@ normalized vendor, currency, route, month, user, fund, and category. Record the 
 range, row count, distinct vendors, and which routes were available. For fund reviews,
 obtain the complete active-fund catalog from the scalable fund/allocation population
 surface; this is the candidate population, including active funds with no cleared spend.
-Follow `next_cursor` through every page of the lightweight catalog, or use the scalable
-Analyst allocation population surface when it returns the complete set. Include funds
-after page one, but do not read live details per fund during this population sweep. Use
-spend facts only to measure activity, then rank the complete lightweight catalog using
-available summary and activity fields. Cap expensive live detail reads at the ten strongest
+Follow `next_cursor` through every page of the lightweight catalog. Include funds after
+page one, but do not read live details per fund during this population sweep. For
+aggregate totals, trends, and group-bys, use the reporting tools: load the workflow with
+`ramp_reporting_get_skill`, then run `ramp_reporting_query` (CLI: `ramp reporting
+get-skill`, then `ramp reporting query`). Use reporting results only to measure activity,
+then rank the complete lightweight catalog using available summary and activity fields. Cap expensive live detail reads at the ten strongest
 candidates needed to produce the five-result output. Catalog pagination completion is
 required and is not subject to the detail-read cap.
 
