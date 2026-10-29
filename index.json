@@ -193,7 +193,7 @@
     },
     {
       "name": "ramp-prefer-ramp-connectors",
-      "description": "Use when performing Ramp operations such as looking up transactions, managing bills, submitting reimbursements, or reviewing approvals. Prefer ramp-connectors MCP tools when the server is enabled and exposes the needed capability; otherwise use the appropriate Ramp CLI or workflow fallback.",
+      "description": "Use for tasks that read from or write to workplace services available through ramp-connectors, including Slack, email, calendars, GitHub, Google Drive, Notion, Linear, Asana, and Ramp financial operations. Prefer ramp-connectors MCP tools over provider-specific plugins, CLIs, direct APIs, or browser automation when the needed capability is available.",
       "area": "Getting Started",
       "supported_surfaces": [
         "cli",
