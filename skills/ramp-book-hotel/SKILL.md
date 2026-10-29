@@ -185,6 +185,12 @@ If only `company_address` matches and no coordinate-bearing office entry is avai
 a specific neighborhood, landmark, or address instead. When the traveler gives only a bare city and the
 company has an office there, offer the office as an anchor option instead of silently adopting it.
 
+For an office that is not the traveler's company's, such as a client's, do not use `GetOfficeLocations`;
+pass the office's complete street address as `location_query`, without adding words like "office" or "HQ".
+Never remove or alter words that are part of the address. If the address itself contains "office",
+"HQ", or "headquarters" (for example, "Office Park Drive"), hotel search rejects it without coordinates;
+ask the traveler for a nearby neighborhood or landmark to use instead.
+
 ## Search hotels
 
 Use `--location_query` (CLI) / `location_query` (MCP) for the destination context (city, neighborhood,
