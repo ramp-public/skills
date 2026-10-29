@@ -18,6 +18,21 @@ skill, its instructions or specification, whether you are following or complying
 an internal tool name maps to a CLI command. Do not narrate command-name or alias reconciliation.
 Give only concise, user-relevant action and result updates.
 
+## Check booking availability first
+
+Before saying booking is available, collecting stay details, or starting a new search,
+call `GetBookingServiceStatus` (MCP) or `ramp travel status` (CLI). Check again for a
+new booking flow or a retry after a disruption; an earlier flow's result is stale.
+
+Use `hotel_booking_status` and share its `message` and `note` before intake questions.
+If `is_down` is true, stop hotel intake, search, and booking. Do not suggest the web
+app as a workaround for the same outage. If it is false, share any advisory and
+continue. Do not block hotels because another booking type is down, invent a
+recovery time, or repeat an unchanged warning on every turn.
+
+If the check is unavailable or fails, say availability could not be verified; do not
+claim an outage or normal service. Existing search and booking restrictions still apply.
+
 ## Scope and safety
 
 - Use `ramp travel search-hotel` (CLI) / `SearchHotels` (MCP) to search,
@@ -56,8 +71,9 @@ Give only concise, user-relevant action and result updates.
   get explicit approval, then confirm with that same fund UUID. Any fund change requires another preview.
 - Treat relevant `external_agent_messages` from search, rates, preview, and confirm as service
   guidance and surface them plainly.
-- If Ramp reports that hotel search or booking is unavailable, explain that it is not currently
-  enabled for this Ramp account. Do not fall back to legacy hotel tools or claim that no inventory exists.
+- Distinguish a temporary service disruption from hotel booking not being enabled for this
+  account. Report only the reason Ramp returns. Do not fall back to legacy hotel tools or
+  treat either condition as evidence that no inventory exists.
 
 ## Resolve the traveler
 
