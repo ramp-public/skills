@@ -23,6 +23,7 @@ description: |-
 - Pass `--agent` for machine-readable JSON output on all commands.
 - Handle amount format differences: transactions use strings (`"$1,048.25"`, `"-$259.49"`), bills use numbers (`15000`), PO amounts use numbers. Reimbursement amounts are in dollars.
 - Paginate until `next_page_cursor` is null — a single page may not return everything.
+- Date-filter transactions with `--start_at` and `--end_at` (ISO 8601 datetimes; `--end_at` is exclusive). Add `Z` or an offset for an exact UTC window, as in exports and reconciliation: all of March UTC is `--start_at 2026-03-01T00:00:00Z --end_at 2026-04-01T00:00:00Z`. Omit the offset to use the user's local time in their Ramp profile time zone, as for "yesterday" or "last week": `--start_at 2026-03-01T00:00:00 --end_at 2026-04-01T00:00:00`. Use the same form for both bounds.
 - Flag vendor name variants explicitly (e.g., "Delta Air Lines" vs "Delta Airlines") — the API does not normalize.
 - Negative transaction amounts are refunds. Include them in totals but call them out.
 
@@ -40,8 +41,8 @@ For each vendor (or all vendors if doing a broad analysis):
 ramp transactions list \
   --transactions_to_retrieve all_transactions_across_entire_business \
   --reason_memo_merchant_or_user_name_text_search "<vendor>" \
-  --from_date <YYYY-MM-DD> \
-  --to_date <YYYY-MM-DD> \
+  --start_at <YYYY-MM-DDT00:00:00Z> \
+  --end_at <YYYY-MM-DDT00:00:00Z> \
   --include_count \
   --page_size 200 \
   --agent --rationale "List the user's transactions"
@@ -53,8 +54,8 @@ If `next_page_cursor` is not null, paginate:
 ramp transactions list \
   --transactions_to_retrieve all_transactions_across_entire_business \
   --reason_memo_merchant_or_user_name_text_search "<vendor>" \
-  --from_date <YYYY-MM-DD> \
-  --to_date <YYYY-MM-DD> \
+  --start_at <YYYY-MM-DDT00:00:00Z> \
+  --end_at <YYYY-MM-DDT00:00:00Z> \
   --page_size 200 \
   --next_page_cursor "<cursor>" \
   --agent --rationale "List the user's transactions"
@@ -118,14 +119,14 @@ run_dir=$(mktemp -d /tmp/spend_analysis.XXXXXX)
 # Page 1
 ramp transactions list \
   --transactions_to_retrieve all_transactions_across_entire_business \
-  --from_date 2026-01-01 --page_size 200 --include_count --agent \
+  --start_at 2026-01-01T00:00:00Z --page_size 200 --include_count --agent \
   --rationale "List the user's transactions" \
   > "$run_dir/txns_page1.json"
 
 # Page 2+ (repeat until next_page_cursor is null)
 ramp transactions list \
   --transactions_to_retrieve all_transactions_across_entire_business \
-  --from_date 2026-01-01 --page_size 200 --include_count --agent \
+  --start_at 2026-01-01T00:00:00Z --page_size 200 --include_count --agent \
   --next_page_cursor "<cursor from previous page>" \
   --rationale "List the user's transactions" \
   > "$run_dir/txns_page2.json"
@@ -207,13 +208,13 @@ For SaaS reviews or inference spend monitoring, run vendors in parallel:
 ```bash
 # Run these concurrently
 ramp transactions list --transactions_to_retrieve all_transactions_across_entire_business \
-  --reason_memo_merchant_or_user_name_text_search "Figma" --from_date 2026-01-01 --include_count --agent --rationale "List the user's transactions"
+  --reason_memo_merchant_or_user_name_text_search "Figma" --start_at 2026-01-01T00:00:00Z --include_count --agent --rationale "List the user's transactions"
 
 ramp transactions list --transactions_to_retrieve all_transactions_across_entire_business \
-  --reason_memo_merchant_or_user_name_text_search "Anthropic" --from_date 2026-01-01 --include_count --agent --rationale "List the user's transactions"
+  --reason_memo_merchant_or_user_name_text_search "Anthropic" --start_at 2026-01-01T00:00:00Z --include_count --agent --rationale "List the user's transactions"
 
 ramp transactions list --transactions_to_retrieve all_transactions_across_entire_business \
-  --reason_memo_merchant_or_user_name_text_search "OpenAI" --from_date 2026-01-01 --include_count --agent --rationale "List the user's transactions"
+  --reason_memo_merchant_or_user_name_text_search "OpenAI" --start_at 2026-01-01T00:00:00Z --include_count --agent --rationale "List the user's transactions"
 ```
 
 **Tip:** For vendors with known name variants, run multiple searches and deduplicate by `transaction_uuid`:
@@ -240,7 +241,7 @@ User: How much have we spent on Figma this year?
 Agent: Let me pull both card transactions and bills.
 > ramp transactions list --transactions_to_retrieve all_transactions_across_entire_business \
 >   --reason_memo_merchant_or_user_name_text_search "Figma" \
->   --from_date 2026-01-01 --to_date 2026-04-01 --include_count --agent \
+>   --start_at 2026-01-01T00:00:00Z --end_at 2026-04-02T00:00:00Z --include_count --agent \
 >   --rationale "List the user's transactions"
 > ramp bills search --query "Figma" --include_paid --from_payment_date 2026-01-01 \
 >   --to_payment_date 2026-04-01 --limit 50 --agent \
@@ -264,7 +265,7 @@ User: Give me a full SaaS vendor breakdown
 
 Agent: Pulling all card transactions and bills with payment activity, then matching them by vendor...
 > ramp transactions list --transactions_to_retrieve all_transactions_across_entire_business \
->   --from_date 2026-01-01 --to_date 2026-04-01 --page_size 200 --include_count \
+>   --start_at 2026-01-01T00:00:00Z --end_at 2026-04-02T00:00:00Z --page_size 200 --include_count \
 >   --agent --rationale "List the user's transactions"
 > ramp bills search --include_paid --from_payment_date 2026-01-01 \
 >   --to_payment_date 2026-04-01 --limit 50 --agent \

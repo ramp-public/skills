@@ -30,7 +30,8 @@ description: |-
   - Terminal agent with the file on disk (Claude Code, Cursor, Codex): call `request-receipt-upload-link` and run the returned `curl` (Step 6).
   - Neither: ask the user to upload in the Ramp web or mobile app, or email it to `receipts@ramp.com`.
 - The `--user_submitted_fields` flag tracks provenance — include it to mark which fields the user explicitly provided vs agent-inferred.
-- All CLI flags use **underscores**, not hyphens (e.g., `--from_date`, `--transaction_uuid`).
+- All CLI flags use **underscores**, not hyphens (e.g., `--start_at`, `--transaction_uuid`).
+- `--start_at` takes an ISO 8601 datetime. Omit the offset (`2026-03-01T00:00:00`) for the user's local time in their Ramp profile time zone; add `Z` or an offset (`2026-03-01T00:00:00Z`) for an exact UTC instant.
 
 ## `--rationale` is required
 
@@ -107,7 +108,7 @@ If revision completion returns:
 
 ```bash
 ramp transactions list --transactions_to_retrieve my_transactions \
-  --from_date {start} --state cleared --rationale "Find transactions needing cleanup" --agent --page_size 50
+  --start_at {start} --state cleared --rationale "Find transactions needing cleanup" --agent --page_size 50
 ```
 
 For any transaction, check what's missing:
@@ -342,7 +343,7 @@ If `pagination.next_cursor` is not null in the JSON envelope, there are more res
 
 ```bash
 ramp transactions list --transactions_to_retrieve my_transactions \
-  --from_date {start} --state cleared --agent --page_size 50 \
+  --start_at {start} --state cleared --agent --page_size 50 \
   --next_page_cursor "{cursor}" --rationale "List the user's transactions"
 ```
 
@@ -353,7 +354,7 @@ User: I have a bunch of transactions that need cleanup
 
 Agent: Let me check what's missing on your recent transactions.
 > ramp transactions list --transactions_to_retrieve my_transactions \
->   --from_date 2026-03-01 --state cleared --rationale "Find transactions needing cleanup" --agent --page_size 50
+>   --start_at 2026-03-01T00:00:00Z --state cleared --rationale "Find transactions needing cleanup" --agent --page_size 50
 
 Found 8 transactions. Checking missing items on each...
 > ramp transactions missing {uuid} --rationale "Check missing items" (×8)
