@@ -168,6 +168,10 @@ job read before presenting recommendations, but leave `airlines` unset. On a rou
 trip, also seed the return leg from
 saved timing with `return_preferred_departure_time_window` (or
 `return_preferred_arrival_time_window`); outbound windows never carry to returns.
+For saved or requested Starlink or Wi-Fi preferences, pass `preferred_connectivity`
+as `starlink` or `wifi`. Current-trip overrides win; clear the search preference
+when withdrawn. Use `applied_preferences` to establish that the preference was
+used; never claim Starlink is guaranteed or filter unknown flights.
 Compare other preferences against returned flight facts and
 explain matches or tradeoffs without claiming the tool applied them. Preserve
 returned policy verdicts and recommendation order.
