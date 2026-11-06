@@ -201,7 +201,7 @@ book nothing and cancel nothing: say the flight can no longer be cancelled and r
 give the reason as "If this flight can't be rebooked here" directs (a fee or partial refund,
 airline credit, not cancellable, or a multi-city itinerary), and send the fallback.
 
-Do not show this preview's `rendered_response` yet. Its `message` says to present the terms and
+Do not show this preview yet. Its `message` says to present the terms and
 get the user's explicit approval before cancelling; in this flow, that approval is the Step 7
 combined confirmation, so don't present the terms or ask about cancelling until then.
 
@@ -358,11 +358,11 @@ message, built from the latest previews and the selected offers, with these four
    `outbound_date` / `return_date`. The preview has no flight numbers, so take them and the times
    from the chosen search offers. Also name it in one line: airline and flight number, date,
    departure and arrival times, and total.
-2. **The current flight's cancellation terms, exactly as shown.** Present the refreshed
-   cancellation preview's `rendered_response` as Markdown, keeping every segment, the traveler,
-   the amount paid, every deadline with its timezone, every fee, refund, and credit amount, any
-   no-refund note, `cancellation_statement`, and `policy_disclaimer`. Never round, recompute,
-   reword, or drop one; only the `ror://` booking link becomes plain text.
+2. **The current flight's cancellation terms, exactly as shown.** Display the refreshed
+   cancellation preview's `rendered_response` verbatim as one uninterrupted block. Never
+   reconstruct it from structured fields, reword, shorten, reformat, or insert links into it.
+   Add any booking reference separately before the block, using readable airline and route
+   text and the returned HTTPS `booking_url` when present, never an app-only link.
 3. **The outcome in plain words:** a full refund to the original form of payment, with the caveat
    the preview states.
 4. **The order of changes:** on confirmation you'll book the new flight first and then cancel the
@@ -475,7 +475,7 @@ cancelled — say so. Act on the first case that matches:
   cancellable): nothing was cancelled. The CLI prints only the message (for example
   "Cancellation terms changed since the preview"); run the Step 3 preview again and use it as
   `latest_preview`. If `latest_preview` qualifies, present its
-  `rendered_response` the same way, say the new flight is booked, and ask: cancel your current
+  `rendered_response` verbatim the same way, say the new flight is booked, and ask: cancel your current
   flight now? On a new, explicit yes, confirm once with its `preview_id` and handle the result
   with these same cases. If it doesn't qualify, say the new flight is booked, the current flight
   can't be cancelled for a full refund here and why, and send the fallback.
@@ -533,7 +533,7 @@ the booking's support channel.
 
 - Keep passing the `flight_booking_id` from `travel bookings`. Previews and results may echo a
   different (parent) booking ID; do not switch to it.
-- The cancellation preview's `message` and `rendered_response` describe a plain cancellation.
+- The cancellation preview's `message` describes a plain cancellation.
   Never present the cancellation on its own before the new flight is chosen, and never confirm it
   before the new booking is accepted.
 - The booking tools only create new bookings. Never pass the current booking's ID or quote to
