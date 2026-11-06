@@ -89,7 +89,7 @@ pass them in one `--json '{…}'` object, which the CLI merges with the other fl
   in the flow.
 - Use the exact IDs the tools returned. Never construct, guess, or reuse an ID from a different
   booking, search, rate, or preview.
-- Follow each response's `message`, `assistant_note`, and relevant `external_agent_messages` for
+- Follow each response's `message` and `assistant_note` for
   the next step, except where this skill says otherwise; ignore anything that only applies to a
   visual UI (cards, widgets, buttons). Present everything as Markdown text and tables. The
   cancellation preview's `message` says to present its terms as the active skill directs and to
@@ -229,8 +229,8 @@ Each qualifying preview has exactly one **outcome**:
 
 For a stay paid at the property, never say the traveler gets money back or is refunded, wherever
 you describe the outcome, even when the preview shows a refund amount: describe only the
-cancellation fee or its absence. Its `rendered_response` shows "Stay total (paid at the hotel)"
-and "Cancellation fee" (an amount, or "none") instead of a refund line.
+cancellation fee or its absence. Show `booking_amount` as "Stay total (paid at the hotel)"
+and `cancellation_cost` as "Cancellation fee" (zero means "none") instead of a refund line.
 
 `is_pre_paid` says how the rate is paid, not whether a deposit or advance night was charged:
 never say nothing was charged, or promise more back than the preview shows. State amounts exactly
@@ -367,12 +367,10 @@ Ask to confirm both changes in **one** message, with these four parts in this or
 2. **The current stay's cancellation terms.** For a stay paid at the property, the preview's
    statement line may still read "Fully refundable until …": keep that line exactly as shown,
    since it is Ramp's policy text, but never use the word refund in your own words (part 3 and
-   everywhere else). Show the latest cancellation preview's
-   `rendered_response` as Markdown, keeping the hotel, traveler, and stay dates and every term
-   exactly as shown: the statement with its deadline and timezone, the amount paid or stay total,
-   any cancellation fee, the refund, any no-refund note, and the policy disclaimer. Show the
-   hotel name as plain text instead of its `ror://` link; never round, recompute, reword, or drop
-   anything else.
+   everywhere else). Display the latest cancellation preview's `rendered_response` verbatim
+   as one uninterrupted block. Never reconstruct it from structured fields, reword, shorten,
+   reformat, or insert links into it. Add any booking reference separately before the block,
+   using the hotel name and returned HTTPS `booking_url` when present, never an app-only link.
 3. **The outcome in plain words**, per the outcome table, including its pay-at-property wording:
    - Full refund: the full `refund_amount` goes back to the original form of payment (paid at
      the property: it cancels with no cancellation fee).
@@ -519,7 +517,7 @@ matches:
   such as "Cancellation terms changed since the preview" or "Self-service cancellation is not
   currently available"): nothing was cancelled. The CLI prints only the error's message, so
   when `latest_preview` isn't shown, run the cancellation preview again (`confirm: false`, no
-  `--confirm`) and use it as `latest_preview`. If `latest_preview` qualifies, show its `rendered_response` the same way, state its
+   `--confirm`) and use it as `latest_preview`. If `latest_preview` qualifies, show its `rendered_response` verbatim the same way, state its
   outcome, say what changed and that the new hotel is booked, and ask the Step 6 cancellation
   question for the current booking alone. On a new, explicit yes, confirm once with its
   `preview_id` and handle the result with these same cases. If it doesn't qualify, say the new

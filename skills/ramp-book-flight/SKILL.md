@@ -585,8 +585,13 @@ return.
 
 The preview returns `eligible_funds`, `fund_eligibility_status`, and `selected_fund_uuid` when a
 fund was explicitly passed; a non-null `selected_fund_uuid` is the booking fund. If
-`fund_eligibility_status=lookup_failed`, do not confirm; repeat
-the preview to resolve funding. If it is `none_eligible`, the valid path is to request new funds.
+`fund_eligibility_status=lookup_failed`, do not preview again (a preview by offer makes a new
+quote that drops chosen seats). Present the preview and, in the same reply, ask for the trip
+purpose so new funds can be requested, making clear that replying books the flight and stating
+the full fare (`expected_total_amount` with its currency); if the fare is out of policy, ask for
+the out-of-policy reason in the same question. When the traveler
+replies with the purpose, that reply is the confirmation: confirm the preview's `flight_quote_uuid`
+with `request_new_fund=true`, the purpose as `reason`, and the preview's `expected_total_amount`. If it is `none_eligible`, the valid path is to request new funds.
 If the traveler chooses or changes to an eligible fund, call preview again with `action=preview`
 and that fund's `fund_uuid` as `spend_allocation_id`; present the refreshed preview and wait for
 a separate explicit confirmation turn.
@@ -699,6 +704,8 @@ Add `--action confirm` and pass the preview's numeric `expected_total_amount` ve
 `--expected_total_amount` (with no currency symbol). This rejects the booking if the fare moved
 instead of quietly charging more. Do not copy the display-formatted `total_amount`.
 For delegated bookings, pass the same `traveler_user_id` (in `--json`) used in the preview.
+After a `lookup_failed` preview, the traveler's trip-purpose reply to the funds question is the
+"yes"; confirm with the preview's `flight_quote_uuid`, `request_new_fund=true`, and `reason`.
 If seats were saved (see "Seat selection"), confirm with the same `flight_quote_uuid` in place
 of `flight_offer_uuid` and the **refreshed** preview's `expected_total_amount`.
 
