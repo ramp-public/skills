@@ -67,7 +67,9 @@ Inspect its effective lock fields before acting:
 - `blocking_task_count` is the number of outstanding tasks blocking spending.
 - `GET_ATTENTION_FEED`: load `ramp-complete-tasks`; do not use
   `LockOrUnlockCard` to bypass the sanction.
-- `LOCK_OR_UNLOCK_CARD`: continue to the normal lock/unlock flow below.
+- `LOCK_OR_UNLOCK_CARD`: continue to the normal lock/unlock flow below only
+  when the card reports `can_unlock=true`. When it is false, do not attempt the
+  unlock; explain each active lock's scope and `remediation_action` instead.
 - `UNLOCK_FRAUD_LOCKED_CARD`: use the fraud-specific unlock workflow returned
   by the tool. The existing result is `FraudLockDetected`.
 - `CONTACT_RAMP`: stop automated unlock attempts and hand the returned lock
@@ -95,12 +97,11 @@ it is required.
 
 ### Step 5: Lock or unlock a card
 
-Before locking, inspect and show the user the affected card, explain that
-locking it will block all transactions until it is unlocked, and ask for
-explicit confirmation. Run the lock command only after the user confirms.
-Do not infer confirmation from a report of suspicious activity or a lost card.
-
-Unlocking does not require confirmation.
+Before locking or unlocking, inspect and show the user the affected card and
+ask for explicit confirmation; before locking, also explain that it will block
+all transactions until the card is unlocked. Run the command only after the
+user confirms. Do not infer confirmation from a report of suspicious activity
+or a lost card.
 
 Before unlocking, re-run `ListCards`. If any lock's `remediation_action` is
 `GET_ATTENTION_FEED`, stop this manual flow and load `ramp-complete-tasks`. If

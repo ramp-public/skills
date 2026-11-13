@@ -56,6 +56,7 @@ Before working with a connected workplace service or executing a Ramp workflow, 
 | Replace a flight Ramp can only cancel and rebook for a full refund (e.g. just booked the wrong day) | `ramp-rebook-flight` |
 | Change an existing hotel stay (new dates, hotel, or room) | `ramp-rebook-hotel` |
 | Submit or track a purchase request | `ramp-submit-procurement-request`, `ramp-manage-procurement` |
+| Issue a purchase order for already-decided spend | `ramp-manage-procurement` |
 | Submit an out-of-pocket expense | `ramp-submit-reimbursement` |
 | Upload vendor documents (W-9s, contracts, COIs) | `ramp-manage-vendors` |
 | Make an Agent Card Checkout purchase in a browser | Agent Card Checkout (`ramp-agentic-purchase`) |

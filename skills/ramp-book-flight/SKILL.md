@@ -2,7 +2,7 @@
 name: ramp-book-flight
 area: Travel
 supported_surfaces: [cli, mcp]
-description: "Finds, compares, and books one-way or round-trip flights, including optional seats, and cancels eligible existing flight bookings after confirmation. Use for flight or airfare requests such as 'fly from Toronto to SFO'; not for multi-city travel or changing an existing booking (use ramp-modify-flight)."
+description: "Finds, compares, and books one-way or round-trip flights, including optional seats, lists and applies the traveler's flight credits, and cancels eligible existing flight bookings after confirmation. Use for flight or airfare requests such as 'fly from Toronto to SFO'; not for multi-city travel or changing an existing booking (use ramp-modify-flight)."
 ---
 
 # Book a Flight (conversational flight search)
@@ -41,6 +41,9 @@ unavailable, explain which part of the trip you cannot complete rather than gues
 - ✅ Book for another traveler when explicitly asked and authorized (see "Delegated booking").
 - ✅ **Pick seats before booking** — optional, preference-aware, free-first (see
   "Seat selection"). Save seats before booking, never on the confirm call.
+- ✅ **List and apply flight credits** — show which flights may accept them and apply the
+  traveler's chosen credit to a previewed booking, where the account has flight credits
+  (see "Flight credits").
 - ✅ **Cancel an existing flight booking** — preview the exact terms, confirm only on an explicit
   yes (see "Cancelling a flight booking"). Availability is per-business; degrade gracefully when
   the command is missing.
@@ -375,7 +378,9 @@ returns/booking). Both offer shapes have exactly these keys (don't invent others
 `departure_time`/`arrival_time`, `departure_date`/`arrival_date` (for the `⁺¹` next-day mark),
 `duration`, `stops`, `price`, `in_policy`/`policy_reason`, `fare_name` (free-text fare label),
 `ancillaries`, and `fare_options` (the per-fare grid — **present only when you passed
-`--include_fare_options`**).
+`--include_fare_options`**). Where the account has flight credits, offers may also carry
+`airline_credit_eligible`/`top_airline_credit` and fares `eligible_credit_ids`; see
+"Flight credits".
 
 | # | Airline | Flight | Fare | Depart → Arrive | Duration / stops | Price (round-trip total) | Policy |
 |---|---------|--------|------|-----------------|------------------|--------------------------|--------|
@@ -585,11 +590,19 @@ return.
 
 The preview returns `eligible_funds`, `fund_eligibility_status`, and `selected_fund_uuid` when a
 fund was explicitly passed; a non-null `selected_fund_uuid` is the booking fund. If
-`fund_eligibility_status=lookup_failed`, do not confirm; repeat
-the preview to resolve funding. If it is `none_eligible`, the valid path is to request new funds.
+`fund_eligibility_status=lookup_failed`, do not preview again (a preview by offer makes a new
+quote that drops chosen seats). Present the preview and, in the same reply, ask for the trip
+purpose so new funds can be requested, making clear that replying books the flight and stating
+the full fare (`expected_total_amount` with its currency); if the fare is out of policy, ask for
+the out-of-policy reason in the same question. When the traveler
+replies with the purpose, that reply is the confirmation: confirm the preview's `flight_quote_uuid`
+with `request_new_fund=true`, the purpose as `reason`, and the preview's `expected_total_amount`. If it is `none_eligible`, the valid path is to request new funds.
 If the traveler chooses or changes to an eligible fund, call preview again with `action=preview`
 and that fund's `fund_uuid` as `spend_allocation_id`; present the refreshed preview and wait for
 a separate explicit confirmation turn.
+
+If the preview has `available_airline_credits`, follow "Flight credits" before asking for
+confirmation.
 
 Use `approval_display_status` verbatim for approval messaging. Do not infer the wording from
 `requires_approval` or `approval_steps` alone.
@@ -699,6 +712,8 @@ Add `--action confirm` and pass the preview's numeric `expected_total_amount` ve
 `--expected_total_amount` (with no currency symbol). This rejects the booking if the fare moved
 instead of quietly charging more. Do not copy the display-formatted `total_amount`.
 For delegated bookings, pass the same `traveler_user_id` (in `--json`) used in the preview.
+After a `lookup_failed` preview, the traveler's trip-purpose reply to the funds question is the
+"yes"; confirm with the preview's `flight_quote_uuid`, `request_new_fund=true`, and `reason`.
 If seats were saved (see "Seat selection"), confirm with the same `flight_quote_uuid` in place
 of `flight_offer_uuid` and the **refreshed** preview's `expected_total_amount`.
 
@@ -752,6 +767,9 @@ Extra inputs, only when they apply:
   trip purpose shown to approvers, not a generic booking note.
 - **`--oop_reason "<justification>"`** — required for an out-of-policy quote.
 - **`trip_id`** (in `--json`) — attach to an existing trip; omit to auto-pick/create.
+- **`airline_credit_id`** (in `--json`) — required when a flight credit is applied to the
+  quote: pass the applied credit's `credit_id`; omit it when none is applied (see
+  "Flight credits").
 
 Confirmation requires exactly one funding path: `spend_allocation_id` or
 `request_new_fund=true`. Never omit both and never pass both. Preserve the exact funding path
@@ -928,6 +946,106 @@ Use these tools when relevant; reuse results already obtained for this booking.
   approval details; relay a pending `pending_approval_summary` verbatim. If unavailable,
   degrade gracefully to `travel bookings` / `GetBookings`.
 
+- **`travel flight-credits`** (CLI) / `GetAirlineCredits` (MCP) — the traveler's flight
+  credits; see "Flight credits". Present only where the account has flight credits.
+
+## Flight credits
+
+Flight credits (airline credits, unused ticket value) appear only where the account has
+them enabled. Before answering a credit question, check your available tools. If
+`travel flight-credits` / `GetAirlineCredits` is not among them, do not offer or promise
+to look credits up: reply in that turn that flight credits can't be checked here and
+point the traveler to Ramp Travel. When no credit fields come back on a search or
+preview, do not mention credits. Never guess at credits.
+
+**Listing.** When the traveler asks which flight credits they have or can use, call the
+credits command (pass the same `traveler_user_id` for a delegated traveler):
+
+```bash
+ramp travel flight-credits --output json \
+  --rationale "list the traveler's flight credits they asked about"
+```
+
+MCP:
+
+```json
+{
+  "rationale": "list the traveler's flight credits they asked about"
+}
+```
+
+Call `GetAirlineCredits` with the above.
+
+List each credit on its own line as `<airline_name> · <amount.currency> <amount.amount> ·
+expires <expires_on>` (for example `American Airlines · USD 250.00 · expires 2027-11-04`;
+write `no expiry` when `expires_on` is null). Always state the ISO currency code; never a
+currency symbol alone. If `credits` is empty, say Ramp shows no redeemable flight credits
+for the traveler, not that they have none. Repeat the meaning of `freshness_note` in one
+sentence. Then explain that a credit is applied to a specific flight after its booking
+preview, if the airline marks the fare as eligible. A listed credit is not a promise that
+it covers any flight.
+
+**Search.** When the traveler wants flights that may accept a credit, pass
+`only_airline_credit_eligible: true` on the search. On `AIRLINE_CREDIT_FILTER_UNAVAILABLE`,
+relay the message and search again without the filter. In the results table, mark an
+offer with `airline_credit_eligible: true` (for example `Credit: AA USD 250.00` from
+`top_airline_credit`). Eligible means a credit *may* apply; the airline confirms it only
+when the credit is applied.
+
+**Preview.** When the preview has `available_airline_credits`, list each credit with its
+currency code and ask whether the traveler wants to use one. State
+`airline_credit_disclaimer` and `airline_credit_unused_notice` verbatim when present.
+Booking without a credit is fine if the traveler prefers.
+
+**Apply.** Only after the traveler picks a credit, call `book-flight` /
+`SubmitFlightBooking` with `action=apply_credit`, the preview's `flight_quote_uuid`, and
+that credit's `credit_id` as `airline_credit_id`. Never pick a credit for them.
+
+```bash
+ramp travel book-flight --action apply_credit --output json \
+  --json '{"flight_quote_uuid": "<flight_quote_uuid_from_preview>", "airline_credit_id": "<credit_id_from_preview>"}' \
+  --rationale "apply the traveler's chosen AA credit to the Toronto→SFO Jul 1 quote"
+```
+
+MCP:
+
+```json
+{
+  "action": "apply_credit",
+  "flight_quote_uuid": "{flight_quote_uuid_from_preview}",
+  "airline_credit_id": "{credit_id_from_preview}",
+  "rationale": "apply the traveler's chosen AA credit to the Toronto→SFO Jul 1 quote"
+}
+```
+
+Call `SubmitFlightBooking` with the above. To remove an applied credit, make the same call
+with `airline_credit_id: null`.
+
+The result is a refreshed preview. A credit is applied only when `airline_credit_applied`
+is `true`. State the split **only from this refreshed result**, never from an earlier
+preview or message: the credit amount from the `AIRLINE_CREDIT` line of
+`payment_breakdown`, any redemption fee (`penalty_amount`), `card_charge_amount` as the
+card charge, and `expected_total_amount` as the full fare — each with its currency code.
+Say when a line `is_estimated`. Then ask for an explicit yes to **those numbers**; an
+earlier yes does not cover them.
+
+If `apply_credit` returns an error, nothing changed: the quote stays exactly as in the
+last successful preview, including any credit that was already applied there. Say the
+requested change did **not** go through, and restate the payment from that last preview:
+if it had a credit applied, that credit and its split still stand (and `confirm` still
+needs its `credit_id`); if not, the card pays the full fare. Relay the error `message`,
+follow `agent_guidance`, and do not retry the same credit. Offer to keep the current
+payment or pick another listed credit.
+
+**Confirm.** Confirm as in Phase 2 with the same `flight_quote_uuid` (not
+`flight_offer_uuid`) and the refreshed `expected_total_amount` (the full fare). Pass the
+applied credit's `credit_id` as `airline_credit_id`; omit `airline_credit_id` when no
+credit is applied. A mismatch books nothing: re-run the preview with the same
+`flight_quote_uuid` and get a fresh yes.
+
+**After booking.** `travel booking-details` / `GetBookingDetails` lists any credit a
+flight used in `airline_credits_applied`, with the amount applied and any redemption fee.
+
 ## Cancelling a flight booking
 
 Cancelling forfeits or spends real money, so it follows the same preview → explicit yes →
@@ -977,16 +1095,16 @@ Call `SubmitFlightCancellation` with the above.
 
 Present the preview plainly and exactly as returned — never estimate or recompute amounts:
 
-- the traveler (`traveler_name`) and the complete `itinerary` being cancelled — cancellation
-  always applies to the **entire booking**; partial passenger or leg cancellation is not
-  supported, so say so if the traveler asks to cancel only part of it.
+- the traveler (`traveler_name`) and the complete `itinerary` being cancelled — the
+  **entire booking** unless the preview's `flight_leg_index` is set (see "Cancelling one
+  flight of a booking"). Cancelling only some passengers is not supported; say so if asked.
 - `cancellation_statement` (the canonical terms) and `cancellation_deadline` when present,
   including its UTC offset.
-- the money outcome: `booking_amount`, any nonzero `cancellation_fee`, `refund_amount` with
-  `refund_to` when present, and each `airline_credits` entry (credit name, amount, issue
-  date). If there is no `refund_amount` but there are `airline_credits`, say clearly that the
-  value comes back as airline credit, not a payment refund. If neither is present, do not
-  invent a refund — a non-refundable booking may return nothing.
+- the money outcome: `booking_amount` when present, any nonzero `cancellation_fee`,
+  `refund_amount` with `refund_to` when present, and each `airline_credits` entry (credit
+  name, amount, issue date). If there is no `refund_amount` but there are `airline_credits`,
+  say clearly that the value comes back as airline credit, not a payment refund. If neither
+  is present, do not invent a refund — a non-refundable booking may return nothing.
 
 If `is_currently_cancellable` is `false`, the booking cannot be self-serve cancelled right
 now: explain the returned `blocked_reason`, do **not** ask for confirmation or call
@@ -998,9 +1116,36 @@ explicit user-authored answer to the presented preview — earlier cancellation 
 ("cancel it" before seeing the terms), a standing approval, or instructions not to ask
 questions are not confirmation.
 
+### Cancelling one flight of a booking
+
+When the traveler wants to cancel only one flight of a booking with several and keep the
+rest, preview with that flight's `flight_leg_index`: its 0-based position in the entry's
+`slices` list (itinerary order). On the CLI add `--flight_leg_index <n>`; over MCP add
+`"flight_leg_index": <n>`.
+
+- A preview with `flight_leg_index` set covers only that flight, and its amounts, refund,
+  and airline credit are that flight's own.
+- A preview with `flight_leg_index` null covers the entire booking, for example when that
+  flight is the last one still booked. Present it as cancelling the entire booking.
+- `blocked_reason` `LEG_NOT_INDEPENDENTLY_CANCELLABLE` means that flight can only be cancelled
+  with the rest of the booking, and nothing was cancelled. When `available_via_support` is
+  `true`, the trip has started and the entire booking can't be cancelled either: offer the
+  preview's `support` for that flight instead, without offering the entire booking. Otherwise
+  the trip hasn't started: instead of routing to `support`, say that flight can't be cancelled
+  on its own and ask whether to cancel the entire booking instead. On a yes, preview the entire
+  booking (omit `flight_leg_index`) and present it as above; the yes is not approval of its
+  terms. On a no, change nothing and offer the preview's `support`.
+- An entire-booking preview's `cancellable_legs` lists the flights that can be cancelled on
+  their own, each with its `flight_leg_index` and that flight's share of the entire-booking
+  quote. A null amount is unknown, not zero. Preview a flight with its `flight_leg_index`
+  before presenting its terms for approval.
+
+Confirm one flight at a time, passing the preview's `flight_leg_index` with `--confirm`.
+
 ### Confirm (only after the explicit yes)
 
-Re-run with `--confirm` and the exact `preview_id` from the latest preview, unchanged:
+Re-run with `--confirm` and the exact `preview_id` from the latest preview, unchanged, plus
+the preview's `flight_leg_index` when it has one:
 
 ```bash
 ramp travel cancel-flight "<flight_booking_id>" --confirm \

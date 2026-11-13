@@ -2,7 +2,7 @@
 name: ramp-rebook-flight
 area: Travel
 supported_surfaces: [cli, mcp]
-description: "Rebooks an existing Ramp Travel flight that can't be changed in place but can be cancelled for a full refund (for example a ticket still inside its airline void window): finds the booking, checks the refund terms, searches and previews a new one-way or round-trip flight, then on one explicit confirmation books the new flight first and cancels the current one. Use when someone wants to change, move, or rebook a flight and Ramp offers cancel-and-rebook for it ('I just booked the wrong day, rebook me for Friday'). Not for flights Ramp can change in place (use ramp-modify-flight), a plain cancellation or a brand-new booking (use ramp-book-flight), multi-city trips, partial refunds or airline credit, or hotel changes (use ramp-rebook-hotel)."
+description: "Rebooks an existing Ramp Travel flight that can't be changed in place but can be cancelled for a full refund (for example a ticket still inside its airline void window): finds the booking, checks the refund terms, searches and previews a new one-way or round-trip flight (or a one-way for one flight of a booking whose flights are ticketed separately, keeping the rest), then on one explicit confirmation books the new flight first and cancels the current one. Use when someone wants to change, move, or rebook a flight and Ramp offers cancel-and-rebook for it ('I just booked the wrong day, rebook me for Friday'). Not for flights Ramp can change in place (use ramp-modify-flight), a plain cancellation or a brand-new booking (use ramp-book-flight), multi-city trips, partial refunds or airline credit, or hotel changes (use ramp-rebook-hotel)."
 ---
 
 # Rebook a Flight (cancel and rebook for a full refund)
@@ -17,8 +17,8 @@ the steps below to the user.
 
 This flow **spends real money and cancels a ticket**. Nothing changes until the traveler
 confirms both the new booking and the cancellation in one explicit reply. After that reply the
-new flight is booked first, and the current flight is cancelled only once the booking is
-accepted, so a failed booking leaves the current flight in place.
+new flight is booked first, and the current flight is cancelled only once the new booking is
+ticketed, so a failed or rejected booking leaves the current flight in place.
 
 ## Stop first if rebooking isn't enabled
 
@@ -60,6 +60,7 @@ reply above. If the traveler only wants to cancel the flight, or only to book a 
 | Resolve a new airport or city | `ramp travel flight-locations` | `GetFlightBookingLocations` |
 | Search new flights | `ramp travel search-flight` | `SearchFlights` |
 | Preview / confirm the new booking | `ramp travel book-flight` | `SubmitFlightBooking` |
+| Check the new booking's status | `ramp travel booking-details` | `GetBookingDetails` |
 
 If a command's group differs, find it with `ramp travel --help` or `ramp tools list --agent`;
 a leaf command's `--help` is the authority for its flags. On the CLI, `booking_id` is positional
@@ -151,7 +152,11 @@ MCP:
 }
 ```
 
-Call `BookingModificationDetails` with the above.
+Call `BookingModificationDetails` with the above. When the traveler wants to replace only one
+flight of a booking with several and keep the rest, add that flight's `flight_leg_index`: its
+0-based position in the entry's `slices` list (itinerary order). On the CLI add
+`--flight_leg_index <n>`; over MCP add `"flight_leg_index": <n>`. Then follow "Replacing one
+flight of a booking" below.
 
 - `self_serve_action.kind` is `cancel_and_rebook`: continue with Step 3. Its `rendered_response`
   ("You can change … by cancelling and rebooking. You can also do this yourself in Ramp:" plus a
@@ -183,7 +188,9 @@ MCP:
 
 Call `SubmitFlightCancellation` with the above. This cancels nothing. If it returns an error
 instead of a preview, nothing was cancelled: relay its `message` and any `support`, and send the
-fallback.
+fallback. Pass `flight_leg_index` only as "Replacing one flight of a booking" directs. An
+entire-booking preview's `cancellable_legs` doesn't change this flow: don't offer those flights
+on their own.
 
 The `preview` **qualifies** only when all of these hold:
 
@@ -201,7 +208,7 @@ book nothing and cancel nothing: say the flight can no longer be cancelled and r
 give the reason as "If this flight can't be rebooked here" directs (a fee or partial refund,
 airline credit, not cancellable, or a multi-city itinerary), and send the fallback.
 
-Do not show this preview's `rendered_response` yet. Its `message` says to present the terms and
+Do not show this preview yet. Its `message` says to present the terms and
 get the user's explicit approval before cancelling; in this flow, that approval is the Step 7
 combined confirmation, so don't present the terms or ask about cancelling until then.
 
@@ -212,6 +219,31 @@ matching name is never evidence that the flight is the user's own. Pass `travele
 `traveler_user_id`, with the original booking's `trip_id`, to the search and both booking calls
 below. When `traveler_is_acting_user` is `false`, name the traveler in every confirmation question
 ("book this flight for Harper and cancel Harper's current flight?").
+
+### Replacing one flight of a booking
+
+When the traveler wants to replace only one flight of a booking with several:
+
+- Pass that flight's `flight_leg_index` to `booking-modification-details` and to **every**
+  `cancel-flight` / `SubmitFlightCancellation` call in this flow: the Step 3 preview, the Step 6
+  refresh, and the Step 9 confirm.
+- A preview with `flight_leg_index` set covers that flight alone; the rest of the booking stays
+  booked. Its `itinerary` is that one flight, so the new flight is a one-way for that flight only
+  (Step 5 drops `return_date`). Never search for or cancel the other flights. In Step 7, add one
+  line that the booking's other flights stay booked.
+- A preview with `flight_leg_index` null covers the entire booking because that flight is its
+  last one still booked. Continue, but search for and describe only that flight.
+- When the preview's `blocked_reason` is `LEG_NOT_INDEPENDENTLY_CANCELLABLE`, nothing changed and
+  that flight can be replaced only together with the rest of the booking. When the preview's
+  `available_via_support` is `true`, the trip has started and the entire booking can't be
+  replaced either: don't offer that, change nothing, and share `support`. Otherwise say that
+  flight can't be replaced on its own and ask whether to replace the entire booking instead: a
+  new booking for all its flights, keeping the ones they didn't ask to change, and cancelling the
+  current booking. This asks what to replace, not for consent. If they want that, restart at
+  Step 3 without `flight_leg_index`. If they don't, change nothing and share the preview's
+  `support`; don't send the fallback.
+- For one flight, the fallback link only cancels that flight: say the new flight is then booked in
+  the Ramp web app.
 
 ## Step 4 — explain, and search in the same turn when nothing is left to ask
 
@@ -237,8 +269,9 @@ flight.
 
 ## Step 5 — search the new flight
 
-Search a brand-new itinerary with the same trip shape: one-way for a one-way booking, and both
-legs (`return_date`) for a round trip, even when only one leg moves. Start the search with the
+Search a brand-new itinerary with the same trip shape as the preview's `itinerary`: one-way for a
+one-way booking or a single flight of a booking, and both legs (`return_date`) for a round trip,
+even when only one leg moves. Start the search with the
 traveler and the original booking's trip:
 
 ```bash
@@ -358,18 +391,18 @@ message, built from the latest previews and the selected offers, with these four
    `outbound_date` / `return_date`. The preview has no flight numbers, so take them and the times
    from the chosen search offers. Also name it in one line: airline and flight number, date,
    departure and arrival times, and total.
-2. **The current flight's cancellation terms, exactly as shown.** Present the refreshed
-   cancellation preview's `rendered_response` as Markdown, keeping every segment, the traveler,
-   the amount paid, every deadline with its timezone, every fee, refund, and credit amount, any
-   no-refund note, `cancellation_statement`, and `policy_disclaimer`. Never round, recompute,
-   reword, or drop one; only the `ror://` booking link becomes plain text.
+2. **The current flight's cancellation terms, exactly as shown.** Display the refreshed
+   cancellation preview's `rendered_response` verbatim as one uninterrupted block. Never
+   reconstruct it from structured fields, reword, shorten, reformat, or insert links into it.
+   Add any booking reference separately before the block, using readable airline and route
+   text and the returned HTTPS `booking_url` when present, never an app-only link.
 3. **The outcome in plain words:** a full refund to the original form of payment, with the caveat
    the preview states.
-4. **The order of changes:** on confirmation you'll book the new flight first and then cancel the
-   current one, which is final. When the booking preview's `approval_display_status` is
-   `Approval required before booking`, say the current flight will still be cancelled right after
-   this confirmation even though the new flight waits for approval, so a rejection leaves the
-   traveler without a flight.
+4. **The order of changes:** on confirmation you'll book the new flight first and cancel the
+   current one once the new one is confirmed, which is final. When the booking preview's
+   `approval_display_status` is `Approval required before booking`, say the current flight is
+   cancelled only once the new flight is approved and ticketed, so a rejection leaves the current
+   flight booked.
 
 Then ask **exactly one question** naming the new flight, its total, the current flight being
 cancelled, and any cost, for example: *book United 1008 for USD 312.00 and cancel your current
@@ -421,9 +454,11 @@ Act on the first case that matches:
 - **Unknown outcome** (a timeout, a dropped connection, or an unexplained server error, including
   one that only names an internal failure such as `Error running tool …`): the
   booking may have been created before the error. Never confirm again and never search for
-  another flight. Check `travel bookings` / `GetBookings` for the traveler; continue to Step 9
-  only if it shows the new booking. Otherwise cancel nothing, say the outcome is unknown, and
-  share the booking's `support`.
+  another flight. Check `travel bookings` / `GetBookings` for the traveler. Continue to Step 9
+  only with the new booking's `booking_request_id`: an entry still being booked carries it; for
+  a booked entry, pass its `flight_booking_id` to `travel booking-details` / `GetBookingDetails`
+  and use the `booking_request_id` it returns. If neither shows the new booking with that ID,
+  cancel nothing, say the outcome is unknown, and share the booking's `support`.
 - **"A booking request has already been submitted for this flight"**: a request for this flight
   already exists, but it is not this submission. Repeating this same confirm returns its booking
   instead of this error, so the request may be for another traveler, by another booker, or older.
@@ -448,11 +483,13 @@ Act on the first case that matches:
 
 ## Step 9 — cancel the current flight
 
-Confirm the cancellation once, with the `preview_id` from the latest qualifying preview:
+Confirm the cancellation once, with the `preview_id` from the latest qualifying preview and the
+new booking's `booking_request_id` from Step 8:
 
 ```bash
 ramp travel cancel-flight "<flight_booking_id>" --confirm \
-  --preview_id "<preview_id>" --output json \
+  --preview_id "<preview_id>" \
+  --replacement_booking_request_id "<booking_request_id>" --output json \
   --rationale "cancel the DEN→SFO Jul 9 flight after booking its replacement; traveler approved"
 ```
 
@@ -463,22 +500,48 @@ MCP:
   "flight_booking_id": "{flight_booking_id}",
   "confirm": true,
   "preview_id": "{preview_id}",
+  "replacement_booking_request_id": "{booking_request_id}",
   "rationale": "cancel the DEN→SFO Jul 9 flight after booking its replacement; traveler approved"
 }
 ```
 
-Call `SubmitFlightCancellation` with the above. The new flight is already booked, so any outcome
+Call `SubmitFlightCancellation` with the above, adding the same `flight_leg_index` when replacing
+one flight of a booking. Always pass `replacement_booking_request_id`: Ramp then cancels the
+current flight only once the new booking is ticketed, even after this conversation ends. Act on
+the first case that matches:
+
+- **`result.replacement_status` is `PENDING`:** the new flight isn't confirmed yet, so nothing is
+  cancelled. Say the current flight stays booked until the new one is confirmed, and is then
+  cancelled automatically on the terms they approved; if the new flight can't be booked, the
+  current flight stays booked; and if the terms get worse or the flight changes first, the
+  current flight is kept and they'll get an email. Don't check again or ask for another
+  confirmation.
+- **`replacement_status` is `FAILED`, on the result or an error:** the new flight isn't booked
+  and nothing was cancelled. Say the current flight is still booked, and offer to search again.
+- **`replacement_status` is `PARTLY_CANCELLED`, on the result or an error:** a flight of the new
+  booking was cancelled or is being cancelled, and nothing was cancelled. Relay `result.message`,
+  which says the current flight is still booked and lists the new booking's flights that are
+  still booked. Name no other flight of the new booking as booked; booking details don't show
+  which of its flights are cancelled. Ask how the traveler wants to proceed. Don't search, book,
+  or cancel again unless they ask, and never call the new flight confirmed.
+
+The new flight is confirmed only when `replacement_status` is `FULFILLED`, on the result or an
+error. Otherwise never call it confirmed: when an error's `replacement_status` is `PENDING`, say
+it is still being booked; when the response has no `replacement_status` (the CLI prints only an
+error's message), pass the `booking_request_id` to `travel booking-details` /
+`GetBookingDetails` and give its status as returned. When the new flight is confirmed, any outcome
 that leaves the current flight active means the traveler holds **both flights** until it is
-cancelled — say so. Act on the first case that matches:
+cancelled — say so:
 
 - **An error with `latest_preview`** (the terms changed, or the flight is no longer
   cancellable): nothing was cancelled. The CLI prints only the message (for example
   "Cancellation terms changed since the preview"); run the Step 3 preview again and use it as
   `latest_preview`. If `latest_preview` qualifies, present its
-  `rendered_response` the same way, say the new flight is booked, and ask: cancel your current
-  flight now? On a new, explicit yes, confirm once with its `preview_id` and handle the result
-  with these same cases. If it doesn't qualify, say the new flight is booked, the current flight
-  can't be cancelled for a full refund here and why, and send the fallback.
+  `rendered_response` verbatim the same way, give the new flight's status as above, and ask:
+  cancel your current flight now? On a new, explicit yes, confirm once with its `preview_id` and
+  the same `replacement_booking_request_id`, and handle the result with these same cases. If it
+  doesn't qualify, give the new flight's status, say the current flight can't be cancelled for a
+  full refund here and why, and send the fallback.
 - **Unknown outcome** (a timeout, a dropped connection, or an unexplained server error, including
   one that only names an internal failure such as `Error running tool …`): the
   cancellation may have gone through before the error, so do not say it wasn't cancelled. Check
@@ -505,7 +568,9 @@ date, and times), and the confirmation email when present. Then report the curre
 cancellation in the result's own words.
 
 - Never call the original flight cancelled unless `cancellation_state` is `SUCCESS`; for
-  `PENDING` or `PROCESSING`, say it is being cancelled. Never say the change is complete while
+  `PENDING` or `PROCESSING`, say it is being cancelled. When a result (not an error) has
+  `replacement_status` `PENDING`, say it will be cancelled once the new flight is confirmed;
+  after an error, nothing is scheduled to cancel it. Never say the change is complete while
   either side is pending.
 - Never call the new flight ticketed, confirmed, or approved unless its result says so. The
   booking confirm response is optimistic: to check fulfillment, pass the `booking_request_id`
@@ -533,7 +598,7 @@ the booking's support channel.
 
 - Keep passing the `flight_booking_id` from `travel bookings`. Previews and results may echo a
   different (parent) booking ID; do not switch to it.
-- The cancellation preview's `message` and `rendered_response` describe a plain cancellation.
+- The cancellation preview's `message` describes a plain cancellation.
   Never present the cancellation on its own before the new flight is chosen, and never confirm it
   before the new booking is accepted.
 - The booking tools only create new bookings. Never pass the current booking's ID or quote to
