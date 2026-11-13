@@ -4,9 +4,10 @@ area: Procurement
 supported_surfaces: [cli, mcp]
 description: |-
   Search, inspect, track, and safely approve submitted procurement requests and
-  purchase orders. Use when: 'find a PO', 'show procurement request details',
-  'purchase order status', 'what procurement requests need approval', or
-  'approve this PO request'. Do NOT use to create, continue, edit, review before
+  purchase orders, and issue a purchase order directly for already-decided spend.
+  Use when: 'find a PO', 'show procurement request details', 'purchase order
+  status', 'what procurement requests need approval', 'approve this PO request',
+  or 'issue a PO for this bill'. Do NOT use to create, continue, edit, review before
   submission, or submit a draft request (use ramp-submit-procurement-request), to
   track or award a sourcing event or RFP (use ramp-manage-sourcing), or for
   a cross-product approval queue (use ramp-approval-dashboard).
@@ -53,7 +54,7 @@ contract edits.
   tracking categories, custom fields, withholding rates, and external IDs
   carried over unchanged; do not report them as changes.
 - For rejection, include the user-supplied or user-accepted reason in
-  `--thoughts`.
+  `--reason`.
 - PO amount fields are numeric currency units with a `currency` code. Display
   them directly; do not apply cents conversion.
 
@@ -104,13 +105,13 @@ contract edits.
 3. Review pending approvals through the request queue:
 
    ```bash
-   ramp requests pending --rationale "Reviewing pending procurement approvals" --thoughts "Reviewing pending procurement requests" --page_size 50 --request_types PURCHASE_ORDER --agent
+   ramp requests pending --rationale "Reviewing pending procurement approvals" --page_size 50 --request_types PURCHASE_ORDER --agent
    ```
 
    Paginate with the returned cursor:
 
    ```bash
-   ramp requests pending --rationale "Continuing pending procurement approval review" --thoughts "Reviewing pending procurement requests" --page_size 50 --request_types PURCHASE_ORDER --start "{next_page_cursor}" --agent
+   ramp requests pending --rationale "Continuing pending procurement approval review" --page_size 50 --request_types PURCHASE_ORDER --start "{next_page_cursor}" --agent
    ```
 
 4. Before approval or rejection, check the current approval step:
@@ -133,9 +134,68 @@ contract edits.
 5. Act only after the user confirms the exact `unified_request_id`:
 
    ```bash
-   ramp requests approve {unified_request_id} --action APPROVE --rationale "Approving confirmed purchase order request" --thoughts "Approved after confirming PO details with the user" --agent
-   ramp requests approve {unified_request_id} --action REJECT --rationale "Rejecting confirmed purchase order request" --thoughts "Rejected: {confirmed_reason}" --agent
+   ramp requests approve {unified_request_id} --action APPROVE --rationale "Approving confirmed purchase order request" --agent
+   ramp requests approve {unified_request_id} --action REJECT --rationale "Rejecting confirmed purchase order request" --reason "{confirmed_reason}" --agent
    ```
+
+## Issue a purchase order directly
+
+Issue directly only when the spend is already decided: a bill with no PO, a signed
+contract, a purchase approved outside Ramp, or a copy of an existing PO. For new
+spend that needs approval, submit a request with `ramp-submit-procurement-request`.
+These commands need the Issue purchase orders permission and may not be offered to
+every user.
+
+- `ramp purchase_orders issue`: a new PO from scratch.
+- `ramp purchase_orders issue-for-bill`: copies a bill or draft bill and matches each
+  PO line to its bill line.
+- `ramp purchase_orders issue-copy`: copies an existing PO; fields you pass replace the
+  copied ones.
+
+Resolve the vendor and entity first:
+
+```bash
+ramp vendors search --search_term "Acme" --limit 10 --rationale "Find the vendor for the PO" --agent
+ramp business list --rationale "Find the entity for the PO" --agent
+```
+
+A new PO from scratch looks like this:
+
+```bash
+ramp purchase_orders issue --json '{"rationale":"Issuing the PO the user confirmed","vendor_uuid":"{vendor_uuid}","entity_uuid":"{entity_uuid}","currency":"USD","name":"Acme analytics","line_items":[{"description":"Platform license, 12 months","unit_price":"4800.00"},{"description":"Implementation hours","unit_price":"150.00","quantity":"10"}]}' --agent
+```
+
+Leave `owner_uuid` out when the user owns the PO; it defaults to the caller. For other
+fields, check the command's `--help` (or `ramp tools schema`) rather than guessing.
+
+Issuing creates a live, approved PO that can go to the vendor and sync to the ERP.
+Before running an issue command, show the vendor, entity, owner, lines and total, and
+get the user's confirmation. If a command fails without a clear error, search POs
+before retrying so you don't issue a duplicate.
+
+On errors:
+
+- Missing fields: ask the user for the listed fields, then issue again.
+- Verification required: give the user the returned link to review and issue the PO in
+  Ramp. Nothing was issued.
+
+To keep a quote or contract with the PO (terminal agents such as Claude Code, Cursor
+or Codex, with the file on disk):
+
+1. After the user confirms the PO, request a one-time upload link
+   (`request-issue-purchase-order-document-upload-link` on MCP):
+
+   ```bash
+   ramp purchase_orders upload-link --rationale "Uploading the quote to keep with the PO" --agent
+   ```
+
+2. Run the returned `curl` command with the local file path. Each link is single use
+   and expires shortly, so request one per file. Never give the URL to the user.
+3. Pass the returned `document_id` to the issue command. The document stays internal
+   and is never sent to the vendor.
+
+Without a shell, ask the user to attach the document on the Issue purchase order form
+in Ramp.
 
 ## Output
 

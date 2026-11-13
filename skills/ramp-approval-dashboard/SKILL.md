@@ -38,8 +38,8 @@ ramp bills pending --agent --limit 50 --rationale "Review bills pending approval
 # Pending reimbursements (no cursor pagination — use --limit)
 ramp reimbursements pending --agent --limit 50 --rationale "Review reimbursements pending approval"
 
-# Pending requests (paginate with --start; --thoughts is required)
-ramp requests pending --thoughts "Reviewing all pending requests" --page_size 50 --agent --rationale "Review pending requests"
+# Pending requests (paginate with --start)
+ramp requests pending --page_size 50 --agent --rationale "Review pending requests"
 
 # Pending travel requests
 ramp travel request-pending --page_size 50 --output json --rationale "Review travel requests pending my approval"
@@ -109,12 +109,11 @@ ramp travel request-pending --page_size 50 --output json --rationale "Refresh tr
 
 ```bash
 # Approve a transaction
-ramp transactions approve {transaction_uuid} --action APPROVE --thoughts "Reviewed — within policy" --rationale "Act on the transaction approval"
+ramp transactions approve {transaction_uuid} --action APPROVE --rationale "Act on the transaction approval"
 
 # Reject a transaction (reason required)
 ramp transactions approve {transaction_uuid} \
   --action REJECT_AND_REQUEST_CHANGES \
-  --thoughts "Missing receipt and over budget" \
   --user_reason "Please attach the receipt and update the memo" --rationale "Act on the transaction approval"
 
 # Approve a bill — not yet available via CLI.
@@ -128,7 +127,7 @@ ramp reimbursements approve {reimbursement_uuid} --action reject \
   --user_reason "Receipt doesn't match the claimed amount" --rationale "Act on the reimbursement approval"
 
 # Approve a request
-ramp requests approve {unified_request_id} --action APPROVE --thoughts "Approved — within team budget" --rationale "Act on the request approval"
+ramp requests approve {unified_request_id} --action APPROVE --rationale "Act on the request approval"
 
 # Approve a travel request
 ramp travel request-approve {booking_request_id} --action approve \
@@ -198,7 +197,7 @@ Agent: Let me check all your pending queues.
 > ramp transactions list --transactions_to_retrieve transactions_awaiting_my_approval --agent --page_size 50 --rationale "List the user's transactions"
 > ramp bills pending --agent --limit 50 --rationale "Review bills pending approval"
 > ramp reimbursements pending --agent --limit 50 --rationale "Review reimbursements pending approval"
-> ramp requests pending --thoughts "Checking approval queue" --page_size 50 --agent --rationale "Review pending requests"
+> ramp requests pending --page_size 50 --agent --rationale "Review pending requests"
 
 Approval queue: 6 items
 
@@ -236,7 +235,7 @@ Memo: "Team lunch"  |  Receipt: attached  |  Accounting: complete
 
 User: Approve it
 
-Agent: > ramp transactions approve txn-001 --action APPROVE --thoughts "Team lunch — receipt and memo present" --rationale "User confirmed approving the DoorDash transaction"
+Agent: > ramp transactions approve txn-001 --action APPROVE --rationale "User confirmed approving the DoorDash transaction"
 Done. Approval queue is clear.
 ```
 
@@ -266,7 +265,6 @@ Always prefer deep link fields from the API response when available — they acc
 | Bill amounts are numeric major currency units | Display the `amount` directly with `currency`; never divide by 100. Group totals by `currency` and never sum mixed currencies |
 | Reimbursement amounts are in dollars | Display as-is |
 | Transaction amounts are formatted strings | Strip "$" and "," for sorting/totaling |
-| `requests pending` requires `--thoughts` | Always include it — describe what you're doing |
 | Bill approvals are not yet available via CLI | Send the user to the Ramp app instead: `https://app.ramp.com/bills` |
 | No undo for approvals | Confirm with user before executing. Use `-n` for dry runs on write commands. |
 | Pagination varies | Check `pagination.next_cursor` in envelope. Pass it via `--next_page_cursor` (transactions), `--page_cursor` (bills), `--start` (requests). Reimbursements: `--limit` only. |

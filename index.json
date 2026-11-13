@@ -34,7 +34,7 @@
     },
     {
       "name": "ramp-book-flight",
-      "description": "Finds, compares, and books one-way or round-trip flights, including optional seats, and cancels eligible existing flight bookings after confirmation. Use for flight or airfare requests such as 'fly from Toronto to SFO'; not for multi-city travel or changing an existing booking (use ramp-modify-flight).",
+      "description": "Finds, compares, and books one-way or round-trip flights, including optional seats, lists and applies the traveler's flight credits, and cancels eligible existing flight bookings after confirmation. Use for flight or airfare requests such as 'fly from Toronto to SFO'; not for multi-city travel or changing an existing booking (use ramp-modify-flight).",
       "area": "Travel",
       "supported_surfaces": [
         "cli",
@@ -124,7 +124,7 @@
     },
     {
       "name": "ramp-manage-procurement",
-      "description": "Search, inspect, track, and safely approve submitted procurement requests and\npurchase orders. Use when: 'find a PO', 'show procurement request details',\n'purchase order status', 'what procurement requests need approval', or\n'approve this PO request'. Do NOT use to create, continue, edit, review before\nsubmission, or submit a draft request (use ramp-submit-procurement-request), to\ntrack or award a sourcing event or RFP (use ramp-manage-sourcing), or for\na cross-product approval queue (use ramp-approval-dashboard).",
+      "description": "Search, inspect, track, and safely approve submitted procurement requests and\npurchase orders, and issue a purchase order directly for already-decided spend.\nUse when: 'find a PO', 'show procurement request details', 'purchase order\nstatus', 'what procurement requests need approval', 'approve this PO request',\nor 'issue a PO for this bill'. Do NOT use to create, continue, edit, review before\nsubmission, or submit a draft request (use ramp-submit-procurement-request), to\ntrack or award a sourcing event or RFP (use ramp-manage-sourcing), or for\na cross-product approval queue (use ramp-approval-dashboard).",
       "area": "Procurement",
       "supported_surfaces": [
         "cli",
@@ -204,7 +204,7 @@
     },
     {
       "name": "ramp-rebook-flight",
-      "description": "Rebooks an existing Ramp Travel flight that can't be changed in place but can be cancelled for a full refund (for example a ticket still inside its airline void window): finds the booking, checks the refund terms, searches and previews a new one-way or round-trip flight, then on one explicit confirmation books the new flight first and cancels the current one. Use when someone wants to change, move, or rebook a flight and Ramp offers cancel-and-rebook for it ('I just booked the wrong day, rebook me for Friday'). Not for flights Ramp can change in place (use ramp-modify-flight), a plain cancellation or a brand-new booking (use ramp-book-flight), multi-city trips, partial refunds or airline credit, or hotel changes (use ramp-rebook-hotel).",
+      "description": "Rebooks an existing Ramp Travel flight that can't be changed in place but can be cancelled for a full refund (for example a ticket still inside its airline void window): finds the booking, checks the refund terms, searches and previews a new one-way or round-trip flight (or a one-way for one flight of a booking whose flights are ticketed separately, keeping the rest), then on one explicit confirmation books the new flight first and cancels the current one. Use when someone wants to change, move, or rebook a flight and Ramp offers cancel-and-rebook for it ('I just booked the wrong day, rebook me for Friday'). Not for flights Ramp can change in place (use ramp-modify-flight), a plain cancellation or a brand-new booking (use ramp-book-flight), multi-city trips, partial refunds or airline credit, or hotel changes (use ramp-rebook-hotel).",
       "area": "Travel",
       "supported_surfaces": [
         "cli",

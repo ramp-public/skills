@@ -69,8 +69,6 @@ claim an outage or normal service. Existing search and booking restrictions stil
 - A selected fund is part of the approved preview state. Never add or change
   `spend_allocation_id` only at confirmation: preview again with the exact selected `fund_uuid`,
   get explicit approval, then confirm with that same fund UUID. Any fund change requires another preview.
-- Treat relevant `external_agent_messages` from search, rates, preview, and confirm as service
-  guidance and surface them plainly.
 - Distinguish a temporary service disruption from hotel booking not being enabled for this
   account. Report only the reason Ramp returns. Do not fall back to legacy hotel tools or
   treat either condition as evidence that no inventory exists.

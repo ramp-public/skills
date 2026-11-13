@@ -175,7 +175,10 @@ The search is also the eligibility check: if the flight cannot be changed here, 
 error instead of options (see "If the search says the flight can't be changed" below).
 
 Pass one `slice_modifications` entry per changed leg with its `leg_index`, and only the fields
-the traveler asked to change (unchanged dates and airports are kept automatically):
+the traveler asked to change (unchanged dates and airports are kept automatically). For an
+earlier or later flight the same day, or a cabin change, pass only `leg_index` in the entry and
+put the change at the top level (`preferred_departure_time_window` or
+`preferred_arrival_time_window`, or `cabin_class`); do not restate the booked date:
 
 ```bash
 ramp travel search-flight-modifications --output json --json '{
