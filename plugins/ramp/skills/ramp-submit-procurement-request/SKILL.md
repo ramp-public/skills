@@ -225,51 +225,26 @@ the field's exact `answer_type`. For complex fields such as `address` and
 
 If the user provides a file, first inspect the current visible fields. Upload it
 only when a visible file field's label or help text matches the file's purpose,
-such as a contract, quote, invoice, or supporting document. An already-answered
-visible file field may accept an intentional additional or replacement file.
+such as a contract, quote, invoice, or supporting document.
 
-`procurement_requests upload-file` is CLI-only, even though this skill also
-supports MCP. MCP callers must not attempt this command; hand off the file
-attachment step to a CLI-capable caller, then resume with the refreshed draft
-state after the attachment is applied.
+Request a one-time upload link for that draft and field, on MCP or CLI. The
+`field_id` can come from `draft_state.fields` or `change_request_state.fields`.
 
 ```bash
-ramp procurement_requests upload-file "<file_field_id>" "<spend_request_uuid>" --file "/absolute/path/to/file.pdf" --rationale "Upload the document requested by the procurement form" --agent
+ramp procurement_requests upload-link "<file_field_id>" "<spend_request_uuid>" --rationale "Upload the contract requested by the procurement form" --agent
 ```
 
-Before uploading, retain whether the selected `field_id` came from
-`draft_state.fields` or `change_request_state.fields`. Field IDs identify their
-form context. Use the returned `answer` object without rebuilding it, and place
-it back into the same form collection:
+Then POST the file as the multipart form field `file` to the returned
+`upload_url`, for example `curl -F file=@/absolute/path/to/file.pdf '<upload_url>'`,
+or from your own code if it already has the file. Never give the URL to the user.
+The `201` response means the file is saved to the field; do not send it again as
+a draft answer. Read the draft again to see what is still missing.
 
-| Selected field collection | Draft update property |
-|---|---|
-| `draft_state.fields` | `answers` |
-| `change_request_state.fields` | `change_request_answers` |
-
-For a request-form upload:
-
-```bash
-ramp procurement_requests draft --json '{
-  "spend_request_uuid": "<spend_request_uuid>",
-  "rationale": "Attach the uploaded document to its procurement form field",
-  "answers": [
-    <returned answer object>
-  ]
-}' --agent
-```
-
-For a change-request-form upload:
-
-```bash
-ramp procurement_requests draft --json '{
-  "spend_request_uuid": "<spend_request_uuid>",
-  "rationale": "Attach the uploaded document to its change-request form field",
-  "change_request_answers": [
-    <returned answer object>
-  ]
-}' --agent
-```
+Each link uploads one file. Request a new link for each additional file; if
+that request or the upload is refused because the field already has a file, ask
+the user to add the file on the request in the Ramp app. If you can't send an
+HTTP POST with the file, ask the user to attach it on the request in the Ramp
+app.
 
 Do not upload a file when no current visible file field matches it, and do not
 attach it to an unrelated field merely because that field is visible.
