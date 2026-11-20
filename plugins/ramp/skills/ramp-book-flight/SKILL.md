@@ -328,8 +328,7 @@ Call `SearchFlights` with the above; include `cabin_class` only if the traveler 
    simply wait for the next user turn to retry the blocking read without asking more questions.
    Once `search_complete` is `true`, present the full results as in Step 4.
 
-If a `SEARCH_STILL_RUNNING` error includes a `job_id`, apply the same rule and resume that job
-only on a later user turn. Never sleep, back off, or present incomplete offers as final.
+Never sleep, back off, or present incomplete offers as final.
 
 ```json
 {
@@ -350,9 +349,7 @@ ranked set. Check `search_complete` before presenting it. If it is `false`, do n
 call search again in the same turn: explain that the search is still running and
 wait for the traveler to ask to continue. On that later turn, re-call with the
 response's canonical `job_id` and the same `cabin_class`/`include_fare_options`
-settings. If a `SEARCH_STILL_RUNNING` error includes a `job_id`, apply the same
-rule and resume that job only on a later user turn. Never sleep, back off, poll,
-or present incomplete offers as final.
+settings. Never sleep, back off, poll, or present incomplete offers as final.
 
 Once complete, empty `offers` = no match — tell the user and offer to change dates/airports.
 (Output is also token-capped, so a long result may page: pass the canonical `job_id` and
@@ -1100,11 +1097,15 @@ Present the preview plainly and exactly as returned — never estimate or recomp
   flight of a booking"). Cancelling only some passengers is not supported; say so if asked.
 - `cancellation_statement` (the canonical terms) and `cancellation_deadline` when present,
   including its UTC offset.
-- the money outcome: `booking_amount` when present, any nonzero `cancellation_fee`,
-  `refund_amount` with `refund_to` when present, and each `airline_credits` entry (credit
-  name, amount, issue date). If there is no `refund_amount` but there are `airline_credits`,
+- the money outcome: `amount_paid` (what was charged) when present, any nonzero
+  `cancellation_fee`, `refund_amount` with `refund_to` when present, and each
+  `airline_credits` entry (credit name, amount, issue date). Do not show `booking_amount`:
+  an entire booking's total can include flights that are not ticketed or charged yet. A null
+  amount is unknown, not zero. If there is no `refund_amount` but there are `airline_credits`,
   say clearly that the value comes back as airline credit, not a payment refund. If neither
-  is present, do not invent a refund — a non-refundable booking may return nothing.
+  is present, do not invent a refund amount; rely on `cancellation_statement`. A
+  non-refundable booking may return nothing, and a flight that isn't ticketed yet has no
+  amounts because it likely hasn't been charged.
 
 If `is_currently_cancellable` is `false`, the booking cannot be self-serve cancelled right
 now: explain the returned `blocked_reason`, do **not** ask for confirmation or call

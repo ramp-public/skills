@@ -21,7 +21,7 @@ Before working with a connected workplace service or executing a Ramp workflow, 
 
 | Area | What it covers | Key entities | Load |
 |---|---|---|---|
-| Cards & Spend | Corporate cards, transactions, attention-feed tasks, funds (spend allocations), receipts, memos, coding | task, card, transaction, fund, receipt, tracking category, merchant | `ramp-complete-tasks`, `ramp-complete-expenses`, `ramp-spend-analysis`, `ramp-spend-audit`, `ramp-card-management`, `ramp-approval-dashboard` |
+| Cards & Spend | Corporate cards, transactions, attention-feed tasks, funds (spend allocations), receipts, memos, coding | task, card, transaction, fund, receipt, tracking category, merchant | `ramp-complete-tasks`, `ramp-complete-expenses`, `ramp-spend-analysis`, `ramp-spend-audit`, `ramp-card-management`, `ramp-approval-dashboard`, `ramp-switch-to-ramp` (move spend limits from another provider) |
 | Bill Pay | Vendor bills/invoices, payment status, approvals, recurring bills | bill, draft bill, recurring bill, payment, vendor (payee) | `ramp-manage-bills`, `ramp-payment-lookup`, `ramp-approval-dashboard` |
 | Procurement | Purchase requests, purchase orders, request approvals, sourcing events (RFP/RFI/RFQ) | unified request, purchase order, sourcing event, RFX | `ramp-submit-procurement-request`, `ramp-manage-procurement`, `ramp-run-sourcing-event`, `ramp-manage-sourcing` |
 | Travel | Flight and hotel search/booking under company policy, including travel approvals | trip, booking, booking request, policy | `ramp-book-flight`, `ramp-modify-flight`, `ramp-rebook-flight`, `ramp-book-hotel`, `ramp-rebook-hotel`, `ramp-approval-dashboard` |

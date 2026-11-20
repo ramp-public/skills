@@ -291,6 +291,17 @@
         "mcp"
       ],
       "path": "skills/ramp-submit-reimbursement"
+    },
+    {
+      "name": "ramp-switch-to-ramp",
+      "description": "Switch to Ramp: recreate spend limits and their members from your current\nspend-management platform as Ramp funds, verify parity, and re-check for\ndrift through an agreed cutover date. Use when moving an existing spend setup\nto Ramp from another provider's live access or an authorized export. For\nreviewing funds already in Ramp, use ramp-spend-audit.",
+      "area": "Cards and Spend",
+      "supported_surfaces": [
+        "cli",
+        "mcp"
+      ],
+      "path": "skills/ramp-switch-to-ramp",
+      "title": "Switch to Ramp"
     }
   ]
 }
