@@ -227,8 +227,14 @@ If the user provides a file, first inspect the current visible fields. Upload it
 only when a visible file field's label or help text matches the file's purpose,
 such as a contract, quote, invoice, or supporting document.
 
-Request a one-time upload link for that draft and field, on MCP or CLI. The
-`field_id` can come from `draft_state.fields` or `change_request_state.fields`.
+If `ramp_open_procurement_file_uploader` is among your tools and you are in a
+chat app that shows interactive cards (such as claude.ai or ChatGPT), call it
+with the draft and field instead, and ask the user to pick the file in the card. The card saves the file to the field;
+read the draft again afterwards. If no card appears, use an upload link as below.
+
+Otherwise, request a one-time upload link for that draft and field, on MCP or
+CLI. The `field_id` can come from `draft_state.fields` or
+`change_request_state.fields`.
 
 ```bash
 ramp procurement_requests upload-link "<file_field_id>" "<spend_request_uuid>" --rationale "Upload the contract requested by the procurement form" --agent

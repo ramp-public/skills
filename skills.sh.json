@@ -36,7 +36,8 @@
         "ramp-complete-tasks",
         "ramp-reporting",
         "ramp-spend-analysis",
-        "ramp-spend-audit"
+        "ramp-spend-audit",
+        "ramp-switch-to-ramp"
       ]
     },
     {
