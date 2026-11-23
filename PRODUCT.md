@@ -29,6 +29,7 @@ Before working with a connected workplace service or executing a Ramp workflow, 
 | Accounting | Coding hygiene, missing items, ERP sync readiness | tracking category, sync run, missing items | `ramp-complete-expenses` *(close-books coming)* |
 | Vendor Management | Vendors (payees), agreements/contracts, vendor documents | vendor, agreement/contract, vendor document | `ramp-manage-vendors` |
 | Reimbursements | Out-of-pocket expense reimbursement | reimbursement, receipt | `ramp-submit-reimbursement` |
+| Developers | Publishing a plugin for your product to the Ramp plugin marketplace and tracking its review | plugin, plugin version, plugin sandbox | `ramp-submit-plugin` |
 | Agentic commerce | Agent Card Checkout (browser checkout), Stripe MPP, x402 wallets, programmable USDC payments | agent card fund, payment credential, x402 wallet, x402 payment | Agent Card Checkout (`ramp-agentic-purchase`), `ramp-mpp-purchase`, `ramp-setup-x402-wallet`, `ramp-make-x402-payment` |
 
 ### Entity disambiguation

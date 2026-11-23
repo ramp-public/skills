@@ -273,6 +273,15 @@
       "path": "skills/ramp-spend-audit"
     },
     {
+      "name": "ramp-submit-plugin",
+      "description": "Publish a plugin for your product to the Ramp plugin marketplace, so it is available in Ramp products: sign up for a Developer Console account, save a plugin draft, request a test sandbox, submit the draft for review, and check the review result. Use when a developer asks to list, submit, or publish their MCP server or plugin on Ramp, or asks whether their Ramp plugin was approved.",
+      "area": "Developers",
+      "supported_surfaces": [
+        "cli"
+      ],
+      "path": "skills/ramp-submit-plugin"
+    },
+    {
       "name": "ramp-submit-procurement-request",
       "description": "Create, complete, and submit new, existing draft, or approved-PO change-request\nRamp procurement requests. Use when: 'submit a procurement request', 'start a\npurchase request', 'continue my draft', 'request to buy', 'create a PO\nrequest', 'change an approved PO', or 'submit a software purchase'. Do NOT use\nto track or approve a submitted request (use ramp-manage-procurement), to run\nan RFP or sourcing event to evaluate vendors (use ramp-run-sourcing-event), or\nfor reimbursements, bills, card expenses, vendor onboarding documents, or\ncontract changes not tied to an approved Ramp PO.",
       "area": "Procurement",

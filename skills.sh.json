@@ -41,6 +41,13 @@
       ]
     },
     {
+      "title": "Developers",
+      "description": "Publish plugins to the Ramp plugin marketplace.",
+      "skills": [
+        "ramp-submit-plugin"
+      ]
+    },
+    {
       "title": "Getting Started",
       "description": "Set up Ramp, apply for an account, and complete business formation.",
       "skills": [

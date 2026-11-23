@@ -106,7 +106,8 @@ When a user asks why a card is locked or asks to unlock it:
    and resolve its outstanding tasks through this workflow. Use
    `blocking_task_count` to report how many tasks still block spending.
 4. For any other remediation action, return to `ramp-card-management`, which
-   routes `LOCK_OR_UNLOCK_CARD`, `UNLOCK_FRAUD_LOCKED_CARD`, and `CONTACT_RAMP`.
+   routes `LOCK_OR_UNLOCK_CARD`, `UNLOCK_FRAUD_LOCKED_CARD`,
+   `COMPLETE_MISSING_ITEMS`, and `CONTACT_RAMP`.
 
 The underlying `card_state` may be `ACTIVE` while a sanction lock is present.
 Never use `card_state == ACTIVE` by itself as evidence that the card can spend.
