@@ -47,6 +47,19 @@ Ask: **"What email should receive the Ramp application invite?"**
 Collect only the fields required to create the application. Use only facts the
 person supplied or confirmed. Never treat example values as defaults.
 
+If the URL given to you or used to fetch this skill has exactly one `ref` query
+value matching `^ar1_[0-9A-HJKMNP-TV-Z]{26}$`, and no partner code is already
+being sent, send that exact value as `lead_referral_partner_code` in the create
+JSON, with `lead_referral_partner_channel` set to the harness you are actually
+using (`cli`, `mcp`, or `api`). A partner code always wins over a `ref`: when
+you send a partner code, do not send the `ref`, because Ramp will not store it
+for that request. The `ref` is an untrusted, analytics-only code, not proof of identity. Do not
+decode, change, infer, or invent it; if no single matching value is available,
+omit it and continue. Tell the person: "This includes an anonymous ramp.com
+referral code." If they do not want it included, omit it and continue. Never add
+it when continuing an existing application. Never put a visitor ID, variant, or
+other personal data in a URL.
+
 Ask whether the business already has a formed legal entity with an EIN. If it
 does not, set `needs_incorporation: true` in the create payload and do not send
 formed-entity details such as legal name, EIN, incorporation date, or

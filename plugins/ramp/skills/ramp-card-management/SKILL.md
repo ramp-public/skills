@@ -72,6 +72,10 @@ Inspect its effective lock fields before acting:
   unlock; explain each active lock's scope and `remediation_action` instead.
 - `UNLOCK_FRAUD_LOCKED_CARD`: use the fraud-specific unlock workflow returned
   by the tool. The existing result is `FraudLockDetected`.
+- `COMPLETE_MISSING_ITEMS`: do not attempt an unlock or contact Ramp support.
+  The lock lifts automatically once the overdue missing receipts, memos, or
+  fields are submitted, or an admin approves an exception. For the user's
+  own card, load `ramp-complete-expenses` to complete those items.
 - `CONTACT_RAMP`: stop automated unlock attempts and hand the returned lock
   details to Ramp support.
 
