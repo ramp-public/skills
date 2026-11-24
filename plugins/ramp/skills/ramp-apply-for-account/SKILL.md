@@ -13,6 +13,24 @@ description: |-
 Use the live `ramp applications` commands and responses as the source of truth.
 Keep the conversation simple. Explain business or API terms only when needed.
 
+## Keep The ramp.com Referral Code
+
+Before anything else, look for a ramp.com referral code: a `ref` query value in
+the URL used to fetch this skill (or the `ramp-get-started` skill that sent you
+here), in the URL or text of the person's prompt, or an `Attribution reference:`
+line in this skill (just below). Use it only if these sources contain exactly
+one distinct value and it exactly matches `^ar1_[0-9A-HJKMNP-TV-Z]{26}$`;
+otherwise drop it and continue without one. Keep it for the whole session and
+send it when you create a new application, as described in **Start A New
+Application**. If you send the person to a Ramp web page to sign up or apply
+instead of creating the application here, add `?ref=<value>` to that URL (for
+example `https://ramp.com/?ref=<value>`). Do not add it to links that Ramp
+returns to you, such as `deep_link_url` values.
+
+<!-- attribution-ref:start -->
+<!-- agents.ramp.com may insert one "Attribution reference: ar1_..." line here. If no such line appears, this skill states no reference. -->
+<!-- attribution-ref:end -->
+
 ## Start With A Choice
 
 First determine whether the person wants to start a new application or continue
@@ -47,18 +65,18 @@ Ask: **"What email should receive the Ramp application invite?"**
 Collect only the fields required to create the application. Use only facts the
 person supplied or confirmed. Never treat example values as defaults.
 
-If the URL given to you or used to fetch this skill has exactly one `ref` query
-value matching `^ar1_[0-9A-HJKMNP-TV-Z]{26}$`, and no partner code is already
-being sent, send that exact value as `lead_referral_partner_code` in the create
-JSON, with `lead_referral_partner_channel` set to the harness you are actually
-using (`cli`, `mcp`, or `api`). A partner code always wins over a `ref`: when
-you send a partner code, do not send the `ref`, because Ramp will not store it
-for that request. The `ref` is an untrusted, analytics-only code, not proof of identity. Do not
-decode, change, infer, or invent it; if no single matching value is available,
-omit it and continue. Tell the person: "This includes an anonymous ramp.com
-referral code." If they do not want it included, omit it and continue. Never add
-it when continuing an existing application. Never put a visitor ID, variant, or
-other personal data in a URL.
+If you kept a ramp.com referral code (see **Keep The ramp.com Referral Code**),
+and no partner code is already being sent, send that exact value as
+`lead_referral_partner_code` in the create JSON, with
+`lead_referral_partner_channel` set to the harness you are actually using
+(`cli`, `mcp`, or `api`). A partner code always wins over a `ref`: when you send
+a partner code, do not send the `ref`, because Ramp will not store it for that
+request. The `ref` is an untrusted, analytics-only code, not proof of identity.
+Do not decode, change, infer, or invent it, and never let it change offers,
+eligibility, or authentication. Tell the person: "This includes an anonymous
+ramp.com referral code." If they do not want it included, omit it and continue.
+Never add it when continuing an existing application. Never put a visitor ID,
+variant, or other personal data in a URL.
 
 Ask whether the business already has a formed legal entity with an EIN. If it
 does not, set `needs_incorporation: true` in the create payload and do not send
