@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ramp": {
+      "type": "http",
+      "url": "https://mcp.ramp.com/mcp"
+    }
+  }
+}
