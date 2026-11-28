@@ -274,10 +274,11 @@
     },
     {
       "name": "ramp-submit-plugin",
-      "description": "Publish a plugin for your product to the Ramp plugin marketplace, so it is available in Ramp products: sign up for a Developer Console account, save a plugin draft, request a test sandbox, submit the draft for review, and check the review result. Use when a developer asks to list, submit, or publish their MCP server or plugin on Ramp, or asks whether their Ramp plugin was approved.",
+      "description": "Publish a plugin for your product to the Ramp plugin marketplace, so it is\navailable in Ramp products: sign up for a Developer Console\naccount, save a plugin draft, request a test sandbox, add a demo video, submit\nthe draft for review, and check the review result. Use when a developer asks to list,\nsubmit, or publish their MCP server or plugin on Ramp, or asks whether their\nRamp plugin was approved.",
       "area": "Developers",
       "supported_surfaces": [
-        "cli"
+        "cli",
+        "mcp"
       ],
       "path": "skills/ramp-submit-plugin"
     },
